@@ -182,6 +182,8 @@ textarea:focus-visible {
   max-width: 1080px;
 }
 
+.hero h1.is-long-copy { font-size: clamp(36px, 7vw, 108px); }
+
 .hero h1 em {
   color: var(--acid);
   font-style: normal;
