@@ -353,6 +353,8 @@ export async function generateReview(input: {
   };
   const fileList = input.images.map((image) => image.fileName);
   const targetLanguage = input.language === "ko" ? "Korean" : "English";
+  const minimumCharacters = input.requirements.reviewRequirements.minimumCharacters ?? input.requirements.minimumCharacters;
+  const targetCharacters = minimumCharacters > 0 ? Math.ceil(minimumCharacters * 1.2) : 1_000;
   const textPrompt = `Write a ${targetLanguage} creator review using only the evidence below.
 
 Available evidence:
@@ -365,10 +367,11 @@ Non-negotiable rules:
 - Never invent prices, parking, opening hours, staff behavior, accessibility, effects, taste, facilities, or service details that are absent from the evidence.
 - Do not state unconfirmed details in the draft; list them briefly in unverifiedClaims.
 - Naturally satisfy required keyword counts, hashtags, links, and mentions.
-- Write roughly 15% beyond the minimum character count.
+- The publishable prose, excluding whitespace and [PHOTO: ...] marker lines, must contain at least ${minimumCharacters} characters. Target ${targetCharacters} characters so the result stays safely above the campaign minimum. Never return a shorter draft.
 - Place every uploaded file exactly once using a [PHOTO: exact-file-name — English description] marker.
 - photoOrder.fileName may use only these files: ${JSON.stringify(fileList)}
 - Write applicationMessage as a 2–3 sentence pre-visit application message in ${targetLanguage}.
+- Before returning JSON, silently verify the body length, every required keyword count, required hashtag, required link, and photo marker count against the evidence.
 
 EVIDENCE JSON:
 ${JSON.stringify(evidence)}

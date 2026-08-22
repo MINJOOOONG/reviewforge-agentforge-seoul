@@ -60,16 +60,21 @@ for (const keyword of keywordRules.bodyKeywords || []) {
   });
 }
 
-const textLength = [...draft.replace(/\s/g, "")].length;
+const publishableDraft = draft.replace(/^\s*\[PHOTO:.*\]\s*$/gm, "");
+const textLength = [...publishableDraft.replace(/\s/g, "")].length;
+const placedPhotoCount = new Set(
+  [...draft.matchAll(/^\s*\[PHOTO:\s*(.+?)(?:\s+[—–-]\s+.+)?\]\s*$/gm)].map((match) => match[1].trim()),
+).size;
+const verifiedPhotoCount = Math.min(uploadedPhotoCount, placedPhotoCount);
 checks.push({
   name: "Body length",
   status: textLength >= minimumCharacters ? "PASS" : "FAIL",
   detail: textLength + " / " + minimumCharacters + " characters",
 });
 checks.push({
-  name: "Uploaded photos",
-  status: uploadedPhotoCount >= minimumPhotos ? "PASS" : "FAIL",
-  detail: uploadedPhotoCount + " / " + minimumPhotos + " photos",
+  name: "Placed photos",
+  status: verifiedPhotoCount >= minimumPhotos ? "PASS" : "FAIL",
+  detail: verifiedPhotoCount + " / " + minimumPhotos + " photos placed in draft",
 });
 
 if (minimumVideos > 0) {

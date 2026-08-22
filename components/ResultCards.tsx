@@ -290,9 +290,113 @@ export function MediaAndOrder({
   );
 }
 
-export function GeneratedContent({ generation, uploads, locale }: { generation: GenerationResult; uploads: UploadedMedia[]; locale: Locale }) {
+export function GeneratedContent({
+  generation,
+  uploads,
+  requirements,
+  compliance,
+  locale,
+}: {
+  generation: GenerationResult;
+  uploads: UploadedMedia[];
+  requirements: CampaignRequirements;
+  compliance: ComplianceResult | null;
+  locale: Locale;
+}) {
+  const ko = locale === "ko";
   const previewMap = useMemo(() => new Map(uploads.map((item) => [item.file.name, item.preview])), [uploads]);
-  const markerPattern = /^\[PHOTO:\s*(.*?)\s*[—-]\s*(.*?)\]$/;
+  const uploadedFileNames = useMemo(
+    () => Array.from(previewMap.keys()).sort((left, right) => right.length - left.length),
+    [previewMap],
+  );
+
+  const parsePhotoMarker = (line: string) => {
+    const marker = line.trim().match(/^\[PHOTO:\s*(.+?)\s*\]$/);
+    if (!marker) return null;
+
+    const markerBody = marker[1].trim();
+    const uploadedFileName = uploadedFileNames.find((fileName) => (
+      markerBody === fileName
+      || markerBody.startsWith(`${fileName} —`)
+      || markerBody.startsWith(`${fileName} –`)
+      || markerBody.startsWith(`${fileName} -`)
+    ));
+
+    if (uploadedFileName) {
+      return {
+        fileName: uploadedFileName,
+        description: markerBody
+          .slice(uploadedFileName.length)
+          .replace(/^\s*[—–-]\s*/, "")
+          .trim(),
+      };
+    }
+
+    const fallback = markerBody.match(/^(.*?)\s+[—–-]\s+(.+)$/);
+    return fallback
+      ? { fileName: fallback[1].trim(), description: fallback[2].trim() }
+      : { fileName: markerBody, description: "" };
+  };
+
+  const review = requirements.reviewRequirements;
+  const keywordRules = requirements.keywordRules;
+  const minimumCharacters = review.minimumCharacters ?? requirements.minimumCharacters;
+  const minimumPhotos = review.minimumPhotos ?? requirements.minimumPhotos;
+  const minimumVideos = review.minimumVideos ?? (requirements.videoRequired ? 1 : 0);
+  const bodyWithoutPhotoMarkers = generation.blogDraft.replace(/^\s*\[PHOTO:.*\]\s*$/gm, "");
+  const actualCharacters = Array.from(bodyWithoutPhotoMarkers.replace(/\s/g, "")).length;
+  const placedPhotos = new Set(
+    generation.blogDraft
+      .split("\n")
+      .map(parsePhotoMarker)
+      .filter((marker): marker is { fileName: string; description: string } => Boolean(marker && previewMap.has(marker.fileName)))
+      .map((marker) => marker.fileName),
+  ).size;
+  const minimumKeywordCounts = { ...review.minimumKeywordCounts, ...requirements.minimumKeywordCounts };
+  const bodyKeywords = Array.from(new Set([...keywordRules.requiredKeywords, ...requirements.requiredKeywords, ...keywordRules.bodyKeywords]));
+  const keywordChecks = [
+    ...keywordRules.titleKeywords.map((keyword) => generation.title.includes(keyword)),
+    ...bodyKeywords.map((keyword) => {
+      const required = minimumKeywordCounts[keyword] ?? keywordRules.minimumOccurrences ?? 1;
+      return generation.blogDraft.split(keyword).length - 1 >= required;
+    }),
+  ];
+  const requiredHashtags = Array.from(new Set([...review.requiredHashtags, ...requirements.requiredHashtags]));
+  const includedHashtags = requiredHashtags.filter((hashtag) => generation.blogDraft.includes(hashtag)).length;
+  const requiredLinks = Array.from(new Set([...review.requiredLinks, ...requirements.requiredLinks]));
+  const includedLinks = requiredLinks.filter((link) => generation.blogDraft.includes(link)).length;
+  const mapLinkIncluded = !review.mapLinkRequired || /(map\.naver\.com|place\.map\.kakao\.com|maps\.app\.goo\.gl|google\.[^/\s]+\/maps)/i.test(generation.blogDraft);
+  const checks = [
+    {
+      label: ko ? "글자 수" : "Characters",
+      value: minimumCharacters > 0
+        ? `${actualCharacters.toLocaleString(locale === "ko" ? "ko-KR" : "en-US")} / ${minimumCharacters.toLocaleString(locale === "ko" ? "ko-KR" : "en-US")}`
+        : `${actualCharacters.toLocaleString(locale === "ko" ? "ko-KR" : "en-US")}`,
+      passed: minimumCharacters <= 0 || actualCharacters >= minimumCharacters,
+    },
+    {
+      label: ko ? "본문 사진" : "Placed photos",
+      value: minimumPhotos > 0 ? `${placedPhotos} / ${minimumPhotos}` : `${placedPhotos}`,
+      passed: minimumPhotos <= 0 || placedPhotos >= minimumPhotos,
+    },
+    ...(minimumVideos > 0 ? [{ label: ko ? "영상" : "Videos", value: `0 / ${minimumVideos}`, passed: false }] : []),
+    {
+      label: ko ? "필수 키워드" : "Keywords",
+      value: `${keywordChecks.filter(Boolean).length} / ${keywordChecks.length}`,
+      passed: keywordChecks.every(Boolean),
+    },
+    {
+      label: ko ? "필수 태그" : "Hashtags",
+      value: `${includedHashtags} / ${requiredHashtags.length}`,
+      passed: includedHashtags === requiredHashtags.length,
+    },
+    ...(requiredLinks.length > 0 || review.mapLinkRequired ? [{
+      label: ko ? "필수 링크" : "Required links",
+      value: `${includedLinks + (review.mapLinkRequired && mapLinkIncluded && !requiredLinks.some((link) => /map\./i.test(link)) ? 1 : 0)} / ${requiredLinks.length + (review.mapLinkRequired && !requiredLinks.some((link) => /map\./i.test(link)) ? 1 : 0)}`,
+      passed: includedLinks === requiredLinks.length && mapLinkIncluded,
+    }] : []),
+  ];
+  const allRequirementsPassed = compliance ? compliance.summary.fail === 0 : checks.every((check) => check.passed);
 
   return (
     <section className="generated-layout">
@@ -302,11 +406,27 @@ export function GeneratedContent({ generation, uploads, locale }: { generation: 
           <span>{locale === "ko" ? "생성된 제목" : "GENERATED TITLE"}</span>
           <h3>{generation.title}</h3>
         </div>
+        <div className={`draft-verification ${allRequirementsPassed ? "is-pass" : "is-warning"}`}>
+          <div className="draft-verification-heading">
+            <span>{compliance ? "DAYTONA · CODE VERIFIED" : (ko ? "작성 기준 확인" : "REQUIREMENT CHECK")}</span>
+            <strong>{allRequirementsPassed ? (ko ? "공고 기준을 충족했어요" : "Campaign requirements met") : (ko ? "보완이 필요한 항목이 있어요" : "Some requirements need attention")}</strong>
+            {compliance && <small>{ko ? `준비도 ${compliance.score} / 100 · 실패 ${compliance.summary.fail}개` : `Readiness ${compliance.score} / 100 · ${compliance.summary.fail} failed`}</small>}
+          </div>
+          <div className="draft-check-list">
+            {checks.map((check) => (
+              <div className={`draft-check ${check.passed ? "is-pass" : "is-fail"}`} key={check.label}>
+                {check.passed ? <CheckCircle2 size={15} /> : <AlertTriangle size={15} />}
+                <span>{check.label}</span>
+                <strong>{check.value}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
         <div className="draft-paper">
           {generation.blogDraft.split("\n").map((line, index) => {
-            const match = line.trim().match(markerPattern);
-            if (match) {
-              const [, fileName, description] = match;
+            const photoMarker = parsePhotoMarker(line);
+            if (photoMarker) {
+              const { fileName, description } = photoMarker;
               return (
                 <figure className="draft-photo" key={`${fileName}-${index}`}>
                   {previewMap.get(fileName) ? (

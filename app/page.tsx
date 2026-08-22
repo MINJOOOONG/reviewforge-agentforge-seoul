@@ -652,7 +652,15 @@ export default function Home() {
                 <>
                   <ExecutionReceipt campaign={campaign} media={media} generation={generation} compliance={compliance} locale={locale} />
                   {campaign && <RequirementsCard requirements={campaign.requirements} locale={locale} />}
-                  {generation && <GeneratedContent generation={generation} uploads={uploads} locale={locale} />}
+                  {generation && campaign && (
+                    <GeneratedContent
+                      generation={generation}
+                      uploads={uploads}
+                      requirements={campaign.requirements}
+                      compliance={compliance}
+                      locale={locale}
+                    />
+                  )}
                 </>
               )}
               {running && (

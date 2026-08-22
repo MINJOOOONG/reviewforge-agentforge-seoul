@@ -27,7 +27,7 @@ export const DEMO_REQUIREMENTS: CampaignRequirements = {
   },
   reviewRequirements: {
     minimumPhotos: 5,
-    minimumVideos: 1,
+    minimumVideos: 0,
     minimumCharacters: 700,
     mapLinkRequired: true,
     requiredLinks: ["https://map.naver.com"],
@@ -188,6 +188,8 @@ ${markers[5] ?? ""}
 
 ${brand}에서 직접 확인한 메뉴와 매장 분위기를 사진 흐름에 맞춰 소개하니 방문 과정이 자연스럽게 이어졌습니다. 성수맛집을 찾으며 사진으로 메뉴와 공간을 비교하는 분들에게 작은 참고가 되길 바랍니다.
 
+사진마다 무엇을 보여주는지 설명을 덧붙여 음식과 공간의 특징을 한 번에 파악할 수 있도록 구성했습니다. 성수맛집과 하루식탁이라는 필수 키워드도 문맥을 해치지 않는 범위에서 자연스럽게 사용했고, 직접 경험하지 않은 내용은 단정하지 않았습니다. 방문을 고민하는 분들이 실제 사진과 솔직한 메모를 중심으로 판단할 수 있는 기록이 되기를 바랍니다.
+
 ${markers.slice(6).join("\n\n")}
 
 매장 정보: https://map.naver.com
@@ -270,7 +272,12 @@ export type ComplianceInput = {
 
 export function runDeterministicCompliance(input: ComplianceInput): Omit<ComplianceResult, "source"> {
   const checks: ComplianceResult["checks"] = [];
-  const textLength = input.draft.replace(/\s/g, "").length;
+  const publishableDraft = input.draft.replace(/^\s*\[PHOTO:.*\]\s*$/gm, "");
+  const textLength = Array.from(publishableDraft.replace(/\s/g, "")).length;
+  const placedPhotoCount = new Set(
+    Array.from(input.draft.matchAll(/^\s*\[PHOTO:\s*(.+?)(?:\s+[—–-]\s+.+)?\]\s*$/gm), (match) => match[1].trim()),
+  ).size;
+  const verifiedPhotoCount = Math.min(input.uploadedPhotoCount, placedPhotoCount);
   const review = input.requirements.reviewRequirements;
   const keywordRules = input.requirements.keywordRules;
   const minimumPhotos = review.minimumPhotos ?? input.requirements.minimumPhotos;
@@ -308,9 +315,9 @@ export function runDeterministicCompliance(input: ComplianceInput): Omit<Complia
     detail: `${textLength.toLocaleString("en-US")} / ${minimumCharacters.toLocaleString("en-US")} characters`,
   });
   checks.push({
-    name: "Uploaded photos",
-    status: input.uploadedPhotoCount >= minimumPhotos ? "PASS" : "FAIL",
-    detail: `${input.uploadedPhotoCount} / ${minimumPhotos} photos`,
+    name: "Placed photos",
+    status: verifiedPhotoCount >= minimumPhotos ? "PASS" : "FAIL",
+    detail: `${verifiedPhotoCount} / ${minimumPhotos} photos placed in draft`,
   });
 
   if (minimumVideos > 0) {

@@ -1221,6 +1221,44 @@ textarea:focus-visible {
   margin: 8px 0 0;
 }
 
+.draft-verification {
+  align-items: center;
+  background: #e8edd2;
+  border-radius: 26px;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(210px, .38fr) 1fr;
+  margin-top: 12px;
+  padding: 22px 24px;
+}
+
+.draft-verification.is-warning { background: #f1e4d9; }
+.draft-verification-heading > span {
+  color: #65702f;
+  display: block;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .14em;
+}
+.draft-verification.is-warning .draft-verification-heading > span { color: #8d563e; }
+.draft-verification-heading strong { display: block; font-size: 15px; margin-top: 6px; }
+.draft-verification-heading small { color: #747764; display: block; font-size: 8px; margin-top: 5px; }
+.draft-check-list { display: flex; flex-wrap: wrap; gap: 7px; justify-content: flex-end; }
+.draft-check {
+  align-items: center;
+  background: rgba(255, 255, 255, .64);
+  border-radius: 999px;
+  display: flex;
+  gap: 6px;
+  min-height: 34px;
+  padding: 8px 11px;
+}
+.draft-check svg { color: #74852d; flex: 0 0 auto; }
+.draft-check.is-fail { background: rgba(255, 235, 226, .92); }
+.draft-check.is-fail svg { color: #b75d3f; }
+.draft-check span { color: #707265; font-size: 8px; }
+.draft-check strong { font-size: 9px; white-space: nowrap; }
+
 .draft-paper {
   background: #fffdf8;
   border: 1px solid #e0ddd5;
@@ -1370,6 +1408,8 @@ footer > p { color: #71726b; font-size: 9px; letter-spacing: .06em; }
   .order-item p { display: none; }
   .draft-card { padding-left: 12px; padding-right: 12px; }
   .draft-card .result-heading, .draft-title-block { margin-left: 10px; margin-right: 10px; }
+  .draft-verification { align-items: start; gap: 15px; grid-template-columns: 1fr; margin-left: 10px; margin-right: 10px; padding: 20px; }
+  .draft-check-list { justify-content: flex-start; }
   .draft-paper { max-height: 720px; padding: 32px 20px; }
   .compliance-layout { grid-template-columns: 1fr; }
   .score-panel { border-bottom: 1px solid var(--line-dark); border-right: 0; padding: 10px 10px 35px; }
