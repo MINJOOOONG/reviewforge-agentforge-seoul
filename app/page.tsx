@@ -18,10 +18,8 @@ import { IntegrationStatus } from "@/components/IntegrationStatus";
 import { MediaUploader, type UploadedMedia } from "@/components/MediaUploader";
 import { PipelineProgress, type PipelineStepId, type PipelineStepState } from "@/components/PipelineProgress";
 import {
-  ComplianceCard,
   ExecutionReceipt,
   GeneratedContent,
-  MediaAndOrder,
   RequirementsCard,
 } from "@/components/ResultCards";
 import type { CampaignAnalysisResult, CampaignRequirements } from "@/types/campaign";
@@ -655,9 +653,7 @@ export default function Home() {
                 <>
                   <ExecutionReceipt campaign={campaign} media={media} generation={generation} compliance={compliance} locale={locale} />
                   {campaign && <RequirementsCard requirements={campaign.requirements} locale={locale} />}
-                  {media && <MediaAndOrder media={media.items} generation={generation} uploads={uploads} locale={locale} />}
                   {generation && <GeneratedContent generation={generation} uploads={uploads} locale={locale} />}
-                  {compliance && <ComplianceCard result={compliance} locale={locale} />}
                 </>
               )}
               {running && (

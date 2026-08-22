@@ -1038,6 +1038,58 @@ textarea:focus-visible {
 .requirement-footnotes span { color: #84857e; font-size: 8px; font-weight: 850; letter-spacing: .14em; }
 .requirement-footnotes p { font-size: 11px; line-height: 1.6; margin: 6px 0 0; }
 
+.requirements-note-card { padding-bottom: 40px; }
+
+.requirements-note {
+  background: #fffdf8;
+  border: 1px solid rgba(21, 21, 18, .1);
+  margin-top: 24px;
+  padding: 8px 32px 8px 58px;
+  position: relative;
+}
+
+.requirements-note::before {
+  background: rgba(220, 107, 77, .55);
+  bottom: 0;
+  content: "";
+  left: 34px;
+  position: absolute;
+  top: 0;
+  width: 1px;
+}
+
+.note-heading {
+  align-items: end;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: 1fr auto;
+  padding: 24px 0 22px;
+}
+
+.note-heading > div { display: flex; flex-direction: column; }
+.note-heading span,
+.note-line > span { color: #85867e; font-size: 8px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+.note-heading strong { font-size: clamp(24px, 3vw, 40px); letter-spacing: -.04em; margin: 8px 0 4px; }
+.note-heading small { color: var(--muted); font-size: 11px; }
+.note-heading > p { align-items: center; color: #66675f; display: flex; font-size: 10px; gap: 6px; margin: 0; white-space: nowrap; }
+.note-heading svg { color: var(--orange); }
+
+.note-line {
+  align-items: start;
+  border-top: 1px solid rgba(21, 21, 18, .1);
+  display: grid;
+  gap: 24px;
+  grid-template-columns: 128px 1fr;
+  min-height: 66px;
+  padding: 20px 0;
+}
+
+.note-line > span { padding-top: 3px; }
+.note-line > p { font-size: 12px; line-height: 1.75; margin: 0; word-break: keep-all; }
+.note-line.is-accent { background: rgba(201, 232, 91, .13); margin-left: -23px; margin-right: -18px; padding-left: 23px; padding-right: 18px; }
+.note-line.is-accent > span { color: #53631b; }
+.note-line.is-accent > p { color: #34400f; font-weight: 700; }
+
 .media-strip {
   display: grid;
   gap: 10px;
@@ -1301,6 +1353,11 @@ footer > p { color: #71726b; font-size: 9px; letter-spacing: .06em; }
   .campaign-overview { grid-template-columns: 1fr; }
   .requirement-grid { grid-template-columns: 1fr; }
   .requirement-footnotes { grid-template-columns: 1fr; }
+  .requirements-note { padding: 4px 18px 4px 35px; }
+  .requirements-note::before { left: 20px; }
+  .note-heading { align-items: start; grid-template-columns: 1fr; }
+  .note-line { gap: 7px; grid-template-columns: 1fr; }
+  .note-line.is-accent { margin-left: -14px; margin-right: -10px; padding-left: 14px; padding-right: 10px; }
   .apply-messages { padding: 22px; }
   .order-item { grid-template-columns: 26px 43px 1fr; }
   .order-item p { display: none; }

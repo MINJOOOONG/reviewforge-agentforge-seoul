@@ -8,14 +8,10 @@ import {
   Clipboard,
   ClipboardCheck,
   ExternalLink,
-  Hash,
   ImageIcon,
-  Link2,
   MessageCircleMore,
   ShieldCheck,
   Sparkles,
-  Type,
-  Video,
   XCircle,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -145,70 +141,68 @@ export function RequirementsCard({ requirements, locale }: { requirements: Campa
   const minimumPhotos = review.minimumPhotos ?? requirements.minimumPhotos;
   const minimumVideos = review.minimumVideos ?? (requirements.videoRequired ? 1 : 0);
   const minimumCharacters = review.minimumCharacters ?? requirements.minimumCharacters;
-  const requirementRows = [
-    ...keywordRules.requiredKeywords.map((keyword) => ({
-      icon: Hash,
-      label: keyword,
-      detail: `${review.minimumKeywordCounts[keyword] ?? requirements.minimumKeywordCounts[keyword] ?? keywordRules.minimumOccurrences ?? 1}${ko ? "회 이상" : "+ uses"}`,
-    })),
-    ...keywordRules.titleKeywords.map((keyword) => ({ icon: Hash, label: `${ko ? "제목" : "Title"} · ${keyword}`, detail: ko ? "제목에 포함" : "Include in title" })),
-    ...keywordRules.bodyKeywords.map((keyword) => ({ icon: Hash, label: `${ko ? "본문" : "Body"} · ${keyword}`, detail: `${review.minimumKeywordCounts[keyword] ?? requirements.minimumKeywordCounts[keyword] ?? keywordRules.minimumOccurrences ?? 1}${ko ? "회 이상" : "+ uses"}` })),
-    ...(minimumPhotos > 0 ? [{ icon: ImageIcon, label: ko ? "필수 사진" : "Required photos", detail: `${minimumPhotos}${ko ? "장 이상" : "+"}` }] : []),
-    ...(minimumCharacters > 0 ? [{ icon: Type, label: ko ? "본문 분량" : "Body length", detail: `${minimumCharacters.toLocaleString(ko ? "ko-KR" : "en-US")}${ko ? "자 이상" : "+ characters"}` }] : []),
-    ...(minimumVideos > 0 ? [{ icon: Video, label: ko ? "필수 영상" : "Required videos", detail: `${minimumVideos}${ko ? "개 이상" : "+"}` }] : []),
-    ...(review.mapLinkRequired ? [{ icon: Link2, label: ko ? "지도 위치 링크" : "Map location link", detail: ko ? "필수" : "Required" }] : []),
-    ...requirements.requiredMentions.map((mention) => ({ icon: MessageCircleMore, label: mention, detail: ko ? "필수 언급" : "Required mention" })),
-    ...review.requiredLinks.map((link) => ({ icon: Link2, label: ko ? "필수 링크" : "Required link", detail: link })),
+  const requiredHashtags = Array.from(new Set([...review.requiredHashtags, ...requirements.requiredHashtags]));
+  const visit = requirements.visitConditions;
+  const visitSummary = [
+    visit.basePartySize ? (ko ? `기준 ${visit.basePartySize}인` : `Party of ${visit.basePartySize}`) : null,
+    visit.maxPartySize ? (ko ? `최대 ${visit.maxPartySize}인` : `Up to ${visit.maxPartySize} guests`) : null,
+    visit.reservationRequired === true ? (ko ? "사전 예약 필수" : "Advance reservation required") : null,
+    visit.petAllowed === true ? (ko ? "반려동물 동반 가능" : "Pets allowed") : null,
+    ...visit.availableTimes,
+    visit.parkingConditions,
+    ...visit.companionConditions,
+    ...visit.otherConditions,
+  ].filter(Boolean) as string[];
+  const keywordSummary = [
+    ...(keywordRules.titleKeywords.length ? [ko ? `제목: ${keywordRules.titleKeywords.join(", ")}` : `Title: ${keywordRules.titleKeywords.join(", ")}`] : []),
+    ...keywordRules.bodyKeywords.map((keyword) => {
+      const count = review.minimumKeywordCounts[keyword] ?? requirements.minimumKeywordCounts[keyword] ?? keywordRules.minimumOccurrences ?? 1;
+      return ko ? `본문: ${keyword} ${count}회 이상` : `Body: ${keyword} ${count}+ times`;
+    }),
+    ...keywordRules.requiredKeywords
+      .filter((keyword) => !keywordRules.bodyKeywords.includes(keyword) && !keywordRules.titleKeywords.includes(keyword))
+      .map((keyword) => ko ? `${keyword} 필수` : `${keyword} required`),
   ];
+  const reviewSummary = Array.from(new Set([
+    minimumPhotos > 0 ? (ko ? `사진 ${minimumPhotos}장 이상` : `${minimumPhotos}+ photos`) : null,
+    minimumVideos > 0 ? (ko ? `영상 ${minimumVideos}개 이상` : `${minimumVideos}+ videos`) : null,
+    minimumCharacters > 0 ? (ko ? `본문 ${minimumCharacters.toLocaleString("ko-KR")}자 이상` : `${minimumCharacters.toLocaleString("en-US")}+ characters`) : null,
+    review.mapLinkRequired ? (ko ? "지도 위치 링크 필수" : "Map location link required") : null,
+    ...requirements.requiredMentions,
+    ...review.requiredLinks,
+    ...requirements.requiredLinks.filter((link) => !review.requiredLinks.includes(link)),
+    ...review.otherRequiredMissions,
+    ...requirements.otherRequirements,
+  ].filter(Boolean) as string[]));
+
+  const NoteLine = ({ label, values, empty, accent = false }: { label: string; values: string[]; empty?: string; accent?: boolean }) => (
+    <div className={`note-line ${accent ? "is-accent" : ""}`}>
+      <span>{label}</span>
+      <p>{values.length ? values.join(" · ") : (empty || (ko ? "공고에 별도 안내 없음" : "Not specified"))}</p>
+    </div>
+  );
 
   return (
-    <section className="result-card requirements-card">
+    <section className="result-card requirements-card requirements-note-card">
       <ResultHeading
         index="01"
         label="BRIGHT DATA + QWEN"
         title={ko ? "캠페인 요구사항" : "Campaign requirements"}
         aside={<span className="evidence-badge"><Check size={13} /> {ko ? "공개 공고 수집 완료" : "Public source captured"}</span>}
       />
-      <div className="campaign-overview">
-        <div>
-          <span>CAMPAIGN</span>
-          <strong>{requirements.campaignName}</strong>
-          <small>{requirements.brand}</small>
+      <div className="requirements-note">
+        <div className="note-heading">
+          <div><span>CAMPAIGN NOTE</span><strong>{requirements.campaignName}</strong><small>{requirements.brand}</small></div>
+          <p><CalendarDays size={14} /> {ko ? "마감" : "Deadline"} · {requirements.deadline || (ko ? "미확인" : "Not specified")}</p>
         </div>
-        <div className="campaign-deadline">
-          <CalendarDays size={17} />
-          <span>{ko ? "마감일" : "Deadline"}</span>
-          <strong>{requirements.deadline || (ko ? "미확인" : "Not specified")}</strong>
-        </div>
+        <NoteLine label={ko ? "제공 내역" : "WHAT YOU RECEIVE"} values={requirements.providedItems} />
+        <NoteLine label={ko ? "방문 조건" : "VISIT CONDITIONS"} values={visitSummary} />
+        <NoteLine label={ko ? "필수 키워드" : "REQUIRED KEYWORDS"} values={keywordSummary} />
+        <NoteLine label={ko ? "리뷰 미션" : "REVIEW MISSION"} values={reviewSummary} />
+        <NoteLine label={ko ? "필수 태그" : "REQUIRED TAGS"} values={requiredHashtags} empty={ko ? "필수 태그 없음" : "No required tags"} accent />
+        {requirements.selectionBoosters.length > 0 && <NoteLine label={ko ? "선정 팁" : "SELECTION TIPS"} values={requirements.selectionBoosters.map((item) => item.description)} />}
+        {requirements.conditionalRequirements.length > 0 && <NoteLine label={ko ? "조건부 안내" : "CONDITIONAL"} values={requirements.conditionalRequirements.map((item) => item.requirement)} />}
       </div>
-      <div className="requirement-grid">
-        {requirementRows.map((row, index) => {
-          const Icon = row.icon;
-          return (
-            <div className="requirement-row" key={`${row.label}-${index}`}>
-              <Icon size={17} strokeWidth={1.8} />
-              <span>{row.label}</span>
-              <small>{row.detail}</small>
-            </div>
-          );
-        })}
-      </div>
-      {(review.requiredHashtags.length > 0 || review.otherRequiredMissions.length > 0 || requirements.selectionBoosters.length > 0 || requirements.conditionalRequirements.length > 0) && (
-        <div className="requirement-footnotes">
-          {review.requiredHashtags.length > 0 && (
-            <div><span>HASHTAGS</span><p>{review.requiredHashtags.join("  ")}</p></div>
-          )}
-          {review.otherRequiredMissions.length > 0 && (
-            <div><span>{ko ? "필수 미션" : "REQUIRED MISSIONS"}</span><p>{review.otherRequiredMissions.join(" · ")}</p></div>
-          )}
-          {requirements.selectionBoosters.length > 0 && (
-            <div><span>{ko ? "선정 우대사항 · 선택" : "SELECTION BOOSTERS · OPTIONAL"}</span><p>{requirements.selectionBoosters.map((item) => item.description).join(" · ")}</p></div>
-          )}
-          {requirements.conditionalRequirements.length > 0 && (
-            <div><span>{ko ? "조건부 미션" : "CONDITIONAL"}</span><p>{requirements.conditionalRequirements.map((item) => item.requirement).join(" · ")}</p></div>
-          )}
-        </div>
-      )}
     </section>
   );
 }
@@ -288,7 +282,7 @@ export function GeneratedContent({ generation, uploads, locale }: { generation: 
   return (
     <section className="generated-layout">
       <article className="result-card draft-card">
-        <ResultHeading index="03" label="QWEN CLOUD" title={locale === "ko" ? "블로그 초안" : "Blog draft"} aside={<CopyButton value={`${generation.title}\n\n${generation.blogDraft}`} locale={locale} />} />
+        <ResultHeading index="02" label="QWEN CLOUD" title={locale === "ko" ? "블로그 초안" : "Blog draft"} aside={<CopyButton value={`${generation.title}\n\n${generation.blogDraft}`} locale={locale} />} />
         <div className="draft-title-block">
           <span>{locale === "ko" ? "생성된 제목" : "GENERATED TITLE"}</span>
           <h3>{generation.title}</h3>
