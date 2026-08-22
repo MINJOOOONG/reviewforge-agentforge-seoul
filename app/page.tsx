@@ -514,7 +514,7 @@ export default function Home() {
         <section className="hero">
           <div className="hero-copy">
             <div className="eyebrow"><span>LOCAL EXPERIENCE AGENT / 01</span><i /></div>
-            <h1>{ko ? <>선정되고.<br /><em>진짜 방문을 기록하세요.</em></> : <>Get selected.<br /><em>Share the real visit.</em></>}</h1>
+            <h1>{ko ? <>공고에서<br /><em>발행 준비까지.</em></> : <>From brief to<br /><em>publish-ready.</em></>}</h1>
             <p>{ko ? "음식점, 카페, 뷰티샵, 숙박, 클래스 등 지역 방문형 체험단의 신청부터 미션에 맞는 후기 작성까지 함께합니다." : "From getting selected to publishing a compliant review, built for real visits to restaurants, cafés, beauty studios, stays, and classes."}</p>
             <a href="#forge" className="hero-link">{ko ? "시작하기" : "START FORGING"} <ArrowDown size={16} /></a>
           </div>
