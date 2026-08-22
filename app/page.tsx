@@ -492,11 +492,6 @@ export default function Home() {
           <span><Flame size={18} fill="currentColor" /></span>
           REVIEWFORGE
         </a>
-        <nav>
-          <a href="#forge">{ko ? "만들기" : "Forge"}</a>
-          <a href="#pipeline">{ko ? "작동 방식" : "How it works"}</a>
-          <a href="#results">{ko ? "결과" : "Output"}</a>
-        </nav>
         <div className="header-actions">
           <div className="language-switch" aria-label="Language">
             <button type="button" className={ko ? "is-active" : ""} onClick={() => setLocale("ko")}>한국어</button>
