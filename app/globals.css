@@ -349,6 +349,7 @@ textarea:focus-visible {
 
 .forge-form.is-apply { grid-template-columns: 1fr; }
 .forge-form.is-apply .form-campaign { border-right: 0; }
+.forge-form.is-apply .form-keywords { border-right: 0; }
 
 .form-column {
   min-width: 0;

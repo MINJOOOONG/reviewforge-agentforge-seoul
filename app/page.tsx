@@ -208,6 +208,7 @@ async function optimizeImageFile(file: File): Promise<File> {
 export default function Home() {
   const [workMode, setWorkMode] = useState<WorkMode>("apply");
   const [campaignUrl, setCampaignUrl] = useState("");
+  const [applicantKeywords, setApplicantKeywords] = useState("");
   const [personalNote, setPersonalNote] = useState("");
   const [uploads, setUploads] = useState<UploadedMedia[]>([]);
   const [steps, setSteps] = useState<PipelineStepState[]>(initialSteps);
@@ -278,7 +279,9 @@ export default function Home() {
 
   const loadSample = useCallback(async () => {
     setCampaignUrl("https://example.com/campaign/reviewforge-demo");
-    if (workMode === "review") {
+    if (workMode === "apply") {
+      setApplicantKeywords("28세, 강남 직장인 커플, 여성, 글쓰기와 맛집 탐방을 좋아함");
+    } else {
       const files = await createSampleFiles();
       setUploads((current) => {
         current.forEach((item) => URL.revokeObjectURL(item.preview));
@@ -350,7 +353,7 @@ export default function Home() {
             await fetch("/api/generate-application", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ requirements }),
+              body: JSON.stringify({ requirements, applicantKeywords }),
             }),
           );
           setApplication(result);
@@ -512,6 +515,24 @@ export default function Home() {
               />
             </div>
           </div>
+
+          {workMode === "apply" && (
+            <div className="form-column form-note form-keywords">
+              <div>
+                <label htmlFor="applicant-keywords"><span>02</span> Applicant Highlights <small>선택</small></label>
+                <p>나이, 활동 지역, 관심사처럼 신청 문구에서 강조할 개인 특성을 쉼표로 구분해 주세요</p>
+              </div>
+              <textarea
+                id="applicant-keywords"
+                placeholder="예: 28세, 강남 직장인 커플, 여성, 글쓰기와 맛집 탐방을 좋아함"
+                value={applicantKeywords}
+                maxLength={500}
+                onChange={(event) => setApplicantKeywords(event.target.value)}
+                disabled={running}
+              />
+              <span className="char-count">{applicantKeywords.length.toLocaleString()} / 500</span>
+            </div>
+          )}
 
           {workMode === "review" && <>
           <div className="form-column form-media">
