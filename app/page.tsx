@@ -462,12 +462,6 @@ export default function Home() {
             <p>캠페인 미션을 읽고, 사진을 이해하고, 근거 있는 후기를 쓴 다음—코드로 마지막 조건까지 검수합니다.</p>
             <a href="#forge" className="hero-link">START FORGING <ArrowDown size={16} /></a>
           </div>
-          <div className="hero-visual" aria-hidden="true">
-            <div className="orbital orbital-one"><span>READ</span><i /></div>
-            <div className="orbital orbital-two"><span>SEE</span><i /></div>
-            <div className="orbital orbital-three"><span>WRITE</span><i /></div>
-            <div className="forge-mark"><Flame size={76} fill="currentColor" /><small>VERIFIED<br />BY CODE</small></div>
-          </div>
         </section>
       </div>
 
