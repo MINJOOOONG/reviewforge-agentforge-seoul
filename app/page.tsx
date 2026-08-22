@@ -460,9 +460,9 @@ export default function Home() {
       <div id="top" className="hero-shell">
         <section className="hero">
           <div className="hero-copy">
-            <div className="eyebrow"><span>CREATOR AGENT / 01</span><i /></div>
-            <h1>From brief to<br /><em>publish-ready.</em></h1>
-            <p>캠페인 미션을 읽고, 사진을 이해하고, 근거 있는 후기를 쓴 다음—코드로 마지막 조건까지 검수합니다.</p>
+            <div className="eyebrow"><span>LOCAL EXPERIENCE AGENT / 01</span><i /></div>
+            <h1>Get selected.<br /><em>Share the real visit.</em></h1>
+            <p>음식점, 카페, 뷰티샵, 숙박, 클래스 등 지역 방문형 체험단의 신청부터 실제 방문 후기와 미션 검수까지 함께합니다.</p>
             <a href="#forge" className="hero-link">START FORGING <ArrowDown size={16} /></a>
           </div>
         </section>
@@ -476,12 +476,12 @@ export default function Home() {
         <div className="journey-tabs">
           <button type="button" className={workMode === "apply" ? "is-active" : ""} aria-pressed={workMode === "apply"} onClick={() => selectMode("apply")} disabled={running}>
             <span>01</span>
-            <div><strong>신청하기</strong><small>공고를 분석하고 방문 전 신청 한마디를 만듭니다.</small></div>
+            <div><strong>신청하기</strong><small>공고에 맞춘 신청 한마디로 선정 가능성을 높입니다.</small></div>
             <ArrowRight size={20} />
           </button>
           <button type="button" className={workMode === "review" ? "is-active" : ""} aria-pressed={workMode === "review"} onClick={() => selectMode("review")} disabled={running}>
             <span>02</span>
-            <div><strong>후기 작성</strong><small>방문 후 사진과 경험으로 후기와 미션 검수를 진행합니다.</small></div>
+            <div><strong>후기 작성</strong><small>실제 방문 사진과 경험을 미션에 맞는 후기로 완성합니다.</small></div>
             <ArrowRight size={20} />
           </button>
         </div>
@@ -491,8 +491,8 @@ export default function Home() {
         <div className="forge-header">
           <div>
             <span className="section-number">01</span>
-            <p>{workMode === "apply" ? "APPLY TO CAMPAIGN" : "INPUT EVIDENCE"}</p>
-            <h2>{workMode === "apply" ? <>Bring the brief.<br />Make the first move.</> : <>Bring the brief.<br />Bring the truth.</>}</h2>
+            <p>{workMode === "apply" ? "GET SELECTED" : "WRITE FROM YOUR VISIT"}</p>
+            <h2>{workMode === "apply" ? <>Campaign-specific.<br />Made for you.</> : <>Your real visit.<br />Mission-compliant.</>}</h2>
           </div>
           <button type="button" className="sample-button" onClick={loadSample} disabled={running || processingUploads}>
             <WandSparkles size={15} /> 데모 입력 채우기
@@ -502,7 +502,7 @@ export default function Home() {
         <div className={`forge-form ${workMode === "apply" ? "is-apply" : ""}`}>
           <div className="form-column form-campaign">
             <label htmlFor="campaign-url"><span>01</span> Campaign URL</label>
-            <p>체험단 또는 리뷰 캠페인의 공개 모집 페이지</p>
+            <p>음식점, 카페, 뷰티샵, 숙박, 클래스 등 지역 방문형 체험단의 공개 모집 페이지</p>
             <div className="url-input-wrap">
               <Link2 size={18} />
               <input
@@ -537,14 +537,14 @@ export default function Home() {
           {workMode === "review" && <>
           <div className="form-column form-media">
             <label><span>02</span> Media Upload <small>{uploads.length.toString().padStart(2, "0")} / 12</small></label>
-            <p>실제로 촬영한 사진을 올리면 GPU가 장면과 품질을 분석합니다</p>
+            <p>직접 방문해 촬영한 사진을 올리면 GPU가 장면과 품질을 분석합니다</p>
             <MediaUploader items={uploads} onAdd={addFiles} onRemove={removeFile} disabled={running || processingUploads} />
           </div>
 
           <div className="form-column form-note">
             <div>
               <label htmlFor="personal-note"><span>03</span> Personal Note</label>
-              <p>AI가 꾸며내지 않도록, 직접 느낀 점을 Ground Truth로 남겨 주세요</p>
+              <p>AI가 꾸며내지 않도록, 방문 현장에서 직접 느낀 점을 Ground Truth로 남겨 주세요</p>
             </div>
             <textarea
               id="personal-note"

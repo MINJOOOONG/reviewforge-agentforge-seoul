@@ -1,20 +1,26 @@
 # ReviewForge
 
-체험단 신청부터 방문 후 후기 작성과 미션 검수까지 자동화하는 AI Creator Agent.
+음식점, 카페, 뷰티샵, 숙박, 클래스 등 지역 방문형 체험단의 신청부터 방문 후기 작성과 미션 검수까지 돕는 AI Creator Agent.
+
+ReviewForge의 MVP 범위는 직접 방문하는 Local Experience Campaign이며, 제품을 배송받아 리뷰하는 Product Campaign은 포함하지 않는다.
 
 ## Problem
 
-체험단 사용자는 공고마다 신청 문구를 작성하고, 선정 후에는 사진을 정리하고 후기 작성 조건을 다시 확인해야 한다.
+지역 방문형 체험단 사용자는 공고마다 선정 가능성을 높일 신청 문구를 작성하고, 선정 후 직접 방문해 촬영한 사진과 경험을 정리한 뒤 리뷰 미션을 다시 확인해야 한다.
 
 ## Solution
 
 ### Apply
 
-Campaign URL → Campaign Analysis → Application Message
+Get selected with a campaign-specific application message.
+
+Campaign URL + Applicant Highlights → Campaign Analysis → Application Message
 
 ### Write Review
 
-Campaign URL + Photos + Personal Note → Blog Draft → Compliance QA
+Turn your real visit into a compliant review.
+
+Campaign URL + Visit Photos + Personal Note → Blog Draft → Compliance QA
 
 ## Tech Stack
 
