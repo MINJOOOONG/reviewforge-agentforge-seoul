@@ -1,0 +1,40 @@
+{
+  "version": "0.1",
+  "type": "container",
+  "ops": [
+    {
+      "type": "container/run",
+      "id": "reviewforge-media-intelligence",
+      "args": {
+        "image": "ghcr.io/replace-with-your-org/reviewforge-media:latest",
+        "gpu": true,
+        "env": {
+          "MODEL_PATH": "/models/clip",
+          "NOSANA_JOB_ID": "%%globals.job%%",
+          "NOSANA_HOST_ID": "%%globals.host%%"
+        },
+        "resources": [
+          {
+            "type": "HF",
+            "repo": "openai/clip-vit-base-patch32",
+            "target": "/models/clip"
+          }
+        ],
+        "expose": [
+          {
+            "port": 8000,
+            "health_checks": [
+              {
+                "type": "http",
+                "path": "/health",
+                "method": "GET",
+                "expected_status": 200,
+                "continuous": true
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
