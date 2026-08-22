@@ -1376,6 +1376,90 @@ footer > p { color: #71726b; font-size: 9px; letter-spacing: .06em; }
   .integration-list { display: grid; grid-template-columns: 1fr 1fr; }
 }
 
+/* Borderless rounded visual skin */
+.journey-tabs { gap: 12px; }
+.journey-tabs button,
+.journey-tabs button + button {
+  border: 0;
+  border-radius: 32px;
+}
+.journey-tabs button:hover { background: #ece7dc; }
+.journey-tabs button.is-active { background: var(--ink); }
+
+.sample-button,
+.rerun-button {
+  background: #e7e2d8;
+  border: 0;
+}
+
+.forge-form {
+  border: 0;
+  border-radius: 32px;
+  overflow: hidden;
+}
+.form-campaign,
+.form-media,
+.form-note,
+.form-column { border: 0; }
+.url-input-wrap {
+  border: 0;
+  border-radius: 999px;
+}
+.url-input-wrap:focus-within,
+.form-note textarea:focus { box-shadow: 0 0 0 3px rgba(201, 232, 91, .65); }
+.form-note textarea {
+  border: 0;
+  border-radius: 24px;
+}
+.upload-dropzone {
+  border: 0;
+  border-radius: 26px;
+}
+.generate-button { border-radius: 999px; }
+
+.pipeline-grid { gap: 12px; }
+.pipeline-step,
+.pipeline-step:nth-child(2),
+.pipeline-step:last-child {
+  background-color: #1c1d1a;
+  border: 0;
+  border-radius: 28px;
+}
+.pipeline-step.is-running { background-color: rgba(217, 255, 79, .07); }
+.pipeline-step.is-success { background-color: #20251b; }
+.pipeline-step.is-error { background-color: rgba(255, 103, 70, .09); }
+
+.execution-receipt,
+.results-loading {
+  border: 0;
+  border-radius: 28px;
+}
+.receipt-item,
+.receipt-item:nth-child(3) { border-left: 0; }
+.results-loading { background: #e8e3d9; }
+.result-card,
+.apply-messages {
+  border: 0;
+  border-radius: 36px;
+}
+.result-heading { border-bottom: 0; }
+.evidence-badge { border-radius: 999px; }
+.requirements-note {
+  border: 0;
+  border-radius: 28px;
+}
+.note-line.is-accent { border-radius: 18px; }
+.copy-button { border-radius: 999px; }
+.copy-button.is-compact {
+  background: #e8e3d9;
+  border: 0;
+}
+.draft-title-block { border-radius: 24px; }
+.draft-paper {
+  border: 0;
+  border-radius: 28px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
