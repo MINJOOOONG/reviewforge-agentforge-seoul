@@ -14,6 +14,7 @@ export async function POST(request: Request) {
   try {
     if (!isDemoMode()) assertRateLimit(request, "media", { limit: 6 });
     const form = await request.formData();
+    const language = form.get("language") === "ko" ? "ko" : "en";
     const files = form.getAll("files").filter((value): value is File => value instanceof File);
     if (!files.length) throw new ProviderError("Nosana", "Upload at least one photo.", 400);
     if (files.length > 12) throw new ProviderError("Nosana", "A maximum of 12 photos can be analyzed at once.", 400);
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
       providerLog("Nosana", "Demo GPU fixture loaded", { images: files.length });
       await demoPause(620);
       return NextResponse.json<MediaAnalysisResult>({
-        items: demoMediaAnalysis(files.map((file) => file.name)),
+        items: demoMediaAnalysis(files.map((file) => file.name), language),
         source: {
           provider: "Nosana",
           mode: "demo",

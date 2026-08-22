@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchCampaign } from "@/lib/brightdata";
-import { DEMO_REQUIREMENTS, demoPause } from "@/lib/demo";
+import { DEMO_REQUIREMENTS, DEMO_REQUIREMENTS_KO, demoPause } from "@/lib/demo";
 import { isDemoMode } from "@/lib/env";
 import { apiError, ProviderError } from "@/lib/http";
 import { providerLog } from "@/lib/logger";
@@ -14,20 +14,21 @@ export const maxDuration = 120;
 export async function POST(request: Request) {
   try {
     if (!isDemoMode()) assertRateLimit(request, "campaign", { limit: 6 });
-    const body = (await request.json()) as { url?: string };
+    const body = (await request.json()) as { url?: string; language?: unknown };
     const url = body.url?.trim();
     if (!url) throw new ProviderError("Bright Data", "Enter a campaign URL.", 400);
 
     if (isDemoMode()) {
+      const demoRequirements = body.language === "ko" ? DEMO_REQUIREMENTS_KO : DEMO_REQUIREMENTS;
       providerLog("BrightData", "Demo fixture loaded", { url });
       await demoPause(480);
       return NextResponse.json<CampaignAnalysisResult>({
-        requirements: { ...DEMO_REQUIREMENTS, sourceUrl: url },
+        requirements: { ...demoRequirements, sourceUrl: url },
         source: {
           provider: "Bright Data",
           mode: "demo",
           fetchedAt: new Date().toISOString(),
-          pageTitle: DEMO_REQUIREMENTS.campaignName,
+          pageTitle: demoRequirements.campaignName,
           requestId: "demo-brd-campaign-01",
         },
       });

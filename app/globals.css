@@ -105,6 +105,11 @@ textarea:focus-visible {
   color: white;
 }
 
+.header-actions { align-items: center; display: flex; gap: 10px; justify-self: end; }
+.language-switch { border: 1px solid var(--line-dark); border-radius: 999px; display: flex; padding: 3px; }
+.language-switch button { background: transparent; border: 0; border-radius: 999px; color: #8f9089; cursor: pointer; font-size: 9px; font-weight: 800; padding: 6px 9px; }
+.language-switch button.is-active { background: white; color: var(--ink); }
+
 .mode-pill {
   align-items: center;
   border: 1px solid var(--line-dark);
@@ -113,7 +118,6 @@ textarea:focus-visible {
   font-size: 9px;
   font-weight: 800;
   gap: 8px;
-  justify-self: end;
   letter-spacing: 0.12em;
   padding: 8px 12px;
 }

@@ -7,6 +7,7 @@ import { generateReview } from "@/lib/qwen";
 import { campaignRequirementsSchema, mediaAnalysisSchema } from "@/lib/schemas";
 import { assertRateLimit } from "@/lib/rate-limit";
 import type { GenerationResult } from "@/types/generation";
+import type { Locale } from "@/types/locale";
 
 export const runtime = "nodejs";
 export const maxDuration = 180;
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
     const requirementsRaw = form.get("requirements");
     const mediaRaw = form.get("media");
     const personalNote = String(form.get("personalNote") || "").trim();
+    const language: Locale = form.get("language") === "ko" ? "ko" : "en";
     const files = form.getAll("files").filter((value): value is File => value instanceof File);
     if (typeof requirementsRaw !== "string" || typeof mediaRaw !== "string") {
       throw new ProviderError("Qwen Cloud", "Campaign or media evidence is missing", 400);
@@ -31,7 +33,7 @@ export async function POST(request: Request) {
     if (isDemoMode()) {
       providerLog("Qwen", "Demo grounded draft loaded", { images: files.length });
       await demoPause(720);
-      const generated = demoGeneration(requirements, media, personalNote);
+      const generated = demoGeneration(requirements, media, personalNote, language);
       return NextResponse.json<GenerationResult>({
         ...generated,
         source: {
@@ -58,7 +60,7 @@ export async function POST(request: Request) {
         return { fileName: file.name, mimeType: file.type, dataUrl: `data:${file.type};base64,${base64}` };
       }),
     );
-    const generated = await generateReview({ requirements, media, personalNote, images });
+    const generated = await generateReview({ requirements, media, personalNote, images, language });
     return NextResponse.json<GenerationResult>({
       title: generated.title,
       applicationMessage: generated.applicationMessage,

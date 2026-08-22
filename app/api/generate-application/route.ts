@@ -8,11 +8,21 @@ import { assertRateLimit } from "@/lib/rate-limit";
 import { campaignRequirementsSchema } from "@/lib/schemas";
 import type { ApplicationGenerationResult, ApplicationMessageVariant } from "@/types/application";
 import type { CampaignRequirements } from "@/types/campaign";
+import type { Locale } from "@/types/locale";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
-function demoApplicationVariants(requirements: CampaignRequirements, applicantKeywords: string[]): ApplicationMessageVariant[] {
+function demoApplicationVariants(requirements: CampaignRequirements, applicantKeywords: string[], language: Locale): ApplicationMessageVariant[] {
+  if (language === "ko") {
+    const brand = requirements.brand || "해당 업체";
+    const profile = applicantKeywords.length ? `저는 ${applicantKeywords.join(", ")}이라는 강점이 있습니다. ` : "";
+    return [
+      { label: "기본형", message: `${profile}${brand} 캠페인의 제공 내용과 모집 조건을 확인하고 신청합니다. 선정된다면 방문 조건과 미션을 꼼꼼히 지켜 매력적인 후기를 작성하겠습니다.` },
+      { label: "콘텐츠 강조형", message: `${profile}${brand}의 메뉴와 공간이 잘 전달될 수 있도록 직접 촬영한 사진과 저만의 관점을 담아 소개하고 싶어 신청합니다. 선정된다면 공고의 키워드와 리뷰 미션을 빠짐없이 반영하겠습니다.` },
+      { label: "간결형", message: `${profile}${brand} 캠페인에 신청합니다. 선정된다면 가이드를 꼼꼼히 반영한 정성스러운 후기를 작성하겠습니다.` },
+    ];
+  }
   const campaignName = requirements.campaignName || "this campaign";
   const brand = requirements.brand && requirements.brand !== "Brand not identified" ? requirements.brand : campaignName;
   const providedItem = requirements.providedItems[0];
@@ -43,12 +53,13 @@ function demoApplicationVariants(requirements: CampaignRequirements, applicantKe
 export async function POST(request: Request) {
   try {
     if (!isDemoMode()) assertRateLimit(request, "application", { limit: 5 });
-    const raw = (await request.json()) as { requirements?: unknown; applicantKeywords?: unknown };
+    const raw = (await request.json()) as { requirements?: unknown; applicantKeywords?: unknown; language?: unknown };
     if (!raw.requirements) {
       throw new ProviderError("Qwen Cloud", "Campaign requirements are missing", 400);
     }
 
     const requirements = campaignRequirementsSchema.parse(raw.requirements);
+    const language: Locale = raw.language === "ko" ? "ko" : "en";
     const applicantKeywords = typeof raw.applicantKeywords === "string"
       ? raw.applicantKeywords
           .split(/[,\n]/)
@@ -61,7 +72,7 @@ export async function POST(request: Request) {
       providerLog("Qwen", "Demo pre-visit application variants loaded", { variants: 3 });
       await demoPause(620);
       return NextResponse.json<ApplicationGenerationResult>({
-        variants: demoApplicationVariants(requirements, applicantKeywords),
+        variants: demoApplicationVariants(requirements, applicantKeywords, language),
         source: {
           provider: "Qwen Cloud",
           mode: "demo",
@@ -72,7 +83,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const generated = await generateApplicationMessages(requirements, applicantKeywords);
+    const generated = await generateApplicationMessages(requirements, applicantKeywords, language);
     return NextResponse.json<ApplicationGenerationResult>({
       variants: generated.variants,
       source: {

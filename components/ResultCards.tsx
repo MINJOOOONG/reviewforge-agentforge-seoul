@@ -24,6 +24,7 @@ import type { CampaignAnalysisResult, CampaignRequirements } from "@/types/campa
 import type { ComplianceCheck, ComplianceResult, ComplianceStatus } from "@/types/compliance";
 import type { GenerationResult } from "@/types/generation";
 import type { MediaAnalysis, MediaAnalysisResult } from "@/types/media";
+import type { Locale } from "@/types/locale";
 
 const categoryLabels: Record<string, string> = {
   hero: "Hero",
@@ -38,7 +39,7 @@ const categoryLabels: Record<string, string> = {
   other: "Other",
 };
 
-function CopyButton({ value, compact = false }: { value: string; compact?: boolean }) {
+function CopyButton({ value, compact = false, locale = "en" }: { value: string; compact?: boolean; locale?: Locale }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -51,7 +52,7 @@ function CopyButton({ value, compact = false }: { value: string; compact?: boole
       }}
     >
       {copied ? <ClipboardCheck size={15} /> : <Clipboard size={15} />}
-      {copied ? "Copied" : "Copy"}
+      {copied ? (locale === "ko" ? "복사됨" : "Copied") : (locale === "ko" ? "복사" : "Copy")}
     </button>
   );
 }
@@ -73,11 +74,13 @@ export function ExecutionReceipt({
   media,
   generation,
   compliance,
+  locale,
 }: {
   campaign: CampaignAnalysisResult | null;
   media: MediaAnalysisResult | null;
   generation: GenerationResult | null;
   compliance: ComplianceResult | null;
+  locale: Locale;
 }) {
   const receipts = [
     campaign && {
@@ -118,8 +121,8 @@ export function ExecutionReceipt({
 
   if (!receipts.length) return null;
   return (
-    <section className="execution-receipt" aria-label="Provider execution receipt">
-      <div className="receipt-heading"><span>EXECUTION RECEIPT</span><small>IDs are truncated · secrets never leave the server</small></div>
+    <section className="execution-receipt" aria-label={locale === "ko" ? "Provider 실행 증빙" : "Provider execution receipt"}>
+      <div className="receipt-heading"><span>{locale === "ko" ? "실행 증빙" : "EXECUTION RECEIPT"}</span><small>{locale === "ko" ? "ID는 일부만 표시 · Secret은 서버 밖으로 전송되지 않음" : "IDs are truncated · secrets never leave the server"}</small></div>
       <div className="receipt-grid">
         {receipts.map((receipt) => (
           <div className="receipt-item" key={receipt.provider}>
@@ -135,7 +138,8 @@ export function ExecutionReceipt({
   );
 }
 
-export function RequirementsCard({ requirements }: { requirements: CampaignRequirements }) {
+export function RequirementsCard({ requirements, locale }: { requirements: CampaignRequirements; locale: Locale }) {
+  const ko = locale === "ko";
   const review = requirements.reviewRequirements;
   const keywordRules = requirements.keywordRules;
   const minimumPhotos = review.minimumPhotos ?? requirements.minimumPhotos;
@@ -145,16 +149,16 @@ export function RequirementsCard({ requirements }: { requirements: CampaignRequi
     ...keywordRules.requiredKeywords.map((keyword) => ({
       icon: Hash,
       label: keyword,
-      detail: `${review.minimumKeywordCounts[keyword] ?? requirements.minimumKeywordCounts[keyword] ?? keywordRules.minimumOccurrences ?? 1}+ uses`,
+      detail: `${review.minimumKeywordCounts[keyword] ?? requirements.minimumKeywordCounts[keyword] ?? keywordRules.minimumOccurrences ?? 1}${ko ? "회 이상" : "+ uses"}`,
     })),
-    ...keywordRules.titleKeywords.map((keyword) => ({ icon: Hash, label: `Title · ${keyword}`, detail: "Include in title" })),
-    ...keywordRules.bodyKeywords.map((keyword) => ({ icon: Hash, label: `Body · ${keyword}`, detail: `${review.minimumKeywordCounts[keyword] ?? requirements.minimumKeywordCounts[keyword] ?? keywordRules.minimumOccurrences ?? 1}+ uses` })),
-    ...(minimumPhotos > 0 ? [{ icon: ImageIcon, label: "Required photos", detail: `${minimumPhotos}+` }] : []),
-    ...(minimumCharacters > 0 ? [{ icon: Type, label: "Body length", detail: `${minimumCharacters.toLocaleString("en-US")}+ characters` }] : []),
-    ...(minimumVideos > 0 ? [{ icon: Video, label: "Required videos", detail: `${minimumVideos}+` }] : []),
-    ...(review.mapLinkRequired ? [{ icon: Link2, label: "Map location link", detail: "Required" }] : []),
-    ...requirements.requiredMentions.map((mention) => ({ icon: MessageCircleMore, label: mention, detail: "Required mention" })),
-    ...review.requiredLinks.map((link) => ({ icon: Link2, label: "Required link", detail: link })),
+    ...keywordRules.titleKeywords.map((keyword) => ({ icon: Hash, label: `${ko ? "제목" : "Title"} · ${keyword}`, detail: ko ? "제목에 포함" : "Include in title" })),
+    ...keywordRules.bodyKeywords.map((keyword) => ({ icon: Hash, label: `${ko ? "본문" : "Body"} · ${keyword}`, detail: `${review.minimumKeywordCounts[keyword] ?? requirements.minimumKeywordCounts[keyword] ?? keywordRules.minimumOccurrences ?? 1}${ko ? "회 이상" : "+ uses"}` })),
+    ...(minimumPhotos > 0 ? [{ icon: ImageIcon, label: ko ? "필수 사진" : "Required photos", detail: `${minimumPhotos}${ko ? "장 이상" : "+"}` }] : []),
+    ...(minimumCharacters > 0 ? [{ icon: Type, label: ko ? "본문 분량" : "Body length", detail: `${minimumCharacters.toLocaleString(ko ? "ko-KR" : "en-US")}${ko ? "자 이상" : "+ characters"}` }] : []),
+    ...(minimumVideos > 0 ? [{ icon: Video, label: ko ? "필수 영상" : "Required videos", detail: `${minimumVideos}${ko ? "개 이상" : "+"}` }] : []),
+    ...(review.mapLinkRequired ? [{ icon: Link2, label: ko ? "지도 위치 링크" : "Map location link", detail: ko ? "필수" : "Required" }] : []),
+    ...requirements.requiredMentions.map((mention) => ({ icon: MessageCircleMore, label: mention, detail: ko ? "필수 언급" : "Required mention" })),
+    ...review.requiredLinks.map((link) => ({ icon: Link2, label: ko ? "필수 링크" : "Required link", detail: link })),
   ];
 
   return (
@@ -162,8 +166,8 @@ export function RequirementsCard({ requirements }: { requirements: CampaignRequi
       <ResultHeading
         index="01"
         label="BRIGHT DATA + QWEN"
-        title="Campaign requirements"
-        aside={<span className="evidence-badge"><Check size={13} /> Public source captured</span>}
+        title={ko ? "캠페인 요구사항" : "Campaign requirements"}
+        aside={<span className="evidence-badge"><Check size={13} /> {ko ? "공개 공고 수집 완료" : "Public source captured"}</span>}
       />
       <div className="campaign-overview">
         <div>
@@ -173,8 +177,8 @@ export function RequirementsCard({ requirements }: { requirements: CampaignRequi
         </div>
         <div className="campaign-deadline">
           <CalendarDays size={17} />
-          <span>Deadline</span>
-          <strong>{requirements.deadline || "Not specified"}</strong>
+          <span>{ko ? "마감일" : "Deadline"}</span>
+          <strong>{requirements.deadline || (ko ? "미확인" : "Not specified")}</strong>
         </div>
       </div>
       <div className="requirement-grid">
@@ -195,13 +199,13 @@ export function RequirementsCard({ requirements }: { requirements: CampaignRequi
             <div><span>HASHTAGS</span><p>{review.requiredHashtags.join("  ")}</p></div>
           )}
           {review.otherRequiredMissions.length > 0 && (
-            <div><span>REQUIRED MISSIONS</span><p>{review.otherRequiredMissions.join(" · ")}</p></div>
+            <div><span>{ko ? "필수 미션" : "REQUIRED MISSIONS"}</span><p>{review.otherRequiredMissions.join(" · ")}</p></div>
           )}
           {requirements.selectionBoosters.length > 0 && (
-            <div><span>SELECTION BOOSTERS · OPTIONAL</span><p>{requirements.selectionBoosters.map((item) => item.description).join(" · ")}</p></div>
+            <div><span>{ko ? "선정 우대사항 · 선택" : "SELECTION BOOSTERS · OPTIONAL"}</span><p>{requirements.selectionBoosters.map((item) => item.description).join(" · ")}</p></div>
           )}
           {requirements.conditionalRequirements.length > 0 && (
-            <div><span>CONDITIONAL</span><p>{requirements.conditionalRequirements.map((item) => item.requirement).join(" · ")}</p></div>
+            <div><span>{ko ? "조건부 미션" : "CONDITIONAL"}</span><p>{requirements.conditionalRequirements.map((item) => item.requirement).join(" · ")}</p></div>
           )}
         </div>
       )}
@@ -213,10 +217,12 @@ export function MediaAndOrder({
   media,
   generation,
   uploads,
+  locale,
 }: {
   media: MediaAnalysis[];
   generation: GenerationResult | null;
   uploads: UploadedMedia[];
+  locale: Locale;
 }) {
   const previewMap = useMemo(() => new Map(uploads.map((item) => [item.file.name, item.preview])), [uploads]);
 
@@ -225,8 +231,8 @@ export function MediaAndOrder({
       <ResultHeading
         index="02"
         label="NOSANA GPU + QWEN"
-        title="Media intelligence"
-        aside={<span className="evidence-badge is-purple"><Sparkles size={13} /> GPU-classified</span>}
+        title={locale === "ko" ? "미디어 분석" : "Media intelligence"}
+        aside={<span className="evidence-badge is-purple"><Sparkles size={13} /> {locale === "ko" ? "GPU 분류 완료" : "GPU-classified"}</span>}
       />
       <div className="media-strip">
         {media.map((item, index) => (
@@ -253,7 +259,7 @@ export function MediaAndOrder({
 
       {generation && (
         <div className="photo-order-block">
-          <span className="subsection-label">RECOMMENDED STORY ORDER</span>
+          <span className="subsection-label">{locale === "ko" ? "추천 사진 순서" : "RECOMMENDED STORY ORDER"}</span>
           <div className="photo-order-list">
             {generation.photoOrder.map((item, index) => (
               <div className="order-item" key={`${item.fileName}-${index}`}>
@@ -275,16 +281,16 @@ export function MediaAndOrder({
   );
 }
 
-export function GeneratedContent({ generation, uploads }: { generation: GenerationResult; uploads: UploadedMedia[] }) {
+export function GeneratedContent({ generation, uploads, locale }: { generation: GenerationResult; uploads: UploadedMedia[]; locale: Locale }) {
   const previewMap = useMemo(() => new Map(uploads.map((item) => [item.file.name, item.preview])), [uploads]);
   const markerPattern = /^\[PHOTO:\s*(.*?)\s*[—-]\s*(.*?)\]$/;
 
   return (
     <section className="generated-layout">
       <article className="result-card draft-card">
-        <ResultHeading index="03" label="QWEN CLOUD" title="Blog draft" aside={<CopyButton value={`${generation.title}\n\n${generation.blogDraft}`} />} />
+        <ResultHeading index="03" label="QWEN CLOUD" title={locale === "ko" ? "블로그 초안" : "Blog draft"} aside={<CopyButton value={`${generation.title}\n\n${generation.blogDraft}`} locale={locale} />} />
         <div className="draft-title-block">
-          <span>GENERATED TITLE</span>
+          <span>{locale === "ko" ? "생성된 제목" : "GENERATED TITLE"}</span>
           <h3>{generation.title}</h3>
         </div>
         <div className="draft-paper">
@@ -335,23 +341,23 @@ function CheckGroup({ status, checks }: { status: ComplianceStatus; checks: Comp
   );
 }
 
-export function ComplianceCard({ result }: { result: ComplianceResult }) {
+export function ComplianceCard({ result, locale }: { result: ComplianceResult; locale: Locale }) {
   return (
     <section className="result-card compliance-card">
       <ResultHeading
         index="04"
         label="DAYTONA SANDBOX"
-        title="Deterministic compliance"
-        aside={<span className="evidence-badge is-dark"><ShieldCheck size={13} /> Executed as code</span>}
+        title={locale === "ko" ? "미션 검수" : "Deterministic compliance"}
+        aside={<span className="evidence-badge is-dark"><ShieldCheck size={13} /> {locale === "ko" ? "코드로 실행" : "Executed as code"}</span>}
       />
       <div className="compliance-layout">
         <div className="score-panel">
           <div className="score-ring" style={{ "--score": `${result.score * 3.6}deg` } as React.CSSProperties}>
             <div><strong>{result.score}</strong><span>/ 100</span></div>
           </div>
-          <span>CAMPAIGN READINESS</span>
-          <h3>{result.summary.fail === 0 ? "Ready to publish" : "A few missions need attention"}</h3>
-          <p>{result.summary.pass} passed · {result.summary.warning} warnings · {result.summary.fail} failed</p>
+          <span>{locale === "ko" ? "캠페인 준비도" : "CAMPAIGN READINESS"}</span>
+          <h3>{result.summary.fail === 0 ? (locale === "ko" ? "발행 준비 완료" : "Ready to publish") : (locale === "ko" ? "확인이 필요한 미션이 있습니다" : "A few missions need attention")}</h3>
+          <p>{locale === "ko" ? `통과 ${result.summary.pass} · 경고 ${result.summary.warning} · 실패 ${result.summary.fail}` : `${result.summary.pass} passed · ${result.summary.warning} warnings · ${result.summary.fail} failed`}</p>
           {result.source.sandboxId && <small>Sandbox {result.source.sandboxId.slice(0, 12)}</small>}
         </div>
         <div className="qa-list">

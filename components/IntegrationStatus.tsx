@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import type { IntegrationHealth } from "@/types/integrations";
+import type { Locale } from "@/types/locale";
 
 const fallbackLabels = ["Bright Data", "Nosana", "Qwen Cloud", "Daytona"];
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
 
-export function IntegrationStatus() {
+export function IntegrationStatus({ locale }: { locale: Locale }) {
   const [items, setItems] = useState<IntegrationHealth[]>([]);
 
   useEffect(() => {
@@ -30,13 +31,13 @@ export function IntegrationStatus() {
 
   return (
     <div className="integration-status">
-      <span className="integration-label">INTEGRATIONS</span>
+      <span className="integration-label">{locale === "ko" ? "연동 상태" : "INTEGRATIONS"}</span>
       <div className="integration-list">
         {visible.map((item) => (
           <span className="integration-item" key={item.name} title={item.detail}>
             <i className={`status-dot status-${item.state}`} />
             {item.label}
-            <small>{item.state === "demo" ? "Demo" : item.state === "missing" ? "Needs key" : item.state === "configured" ? "Ready" : item.state === "connected" ? "Live" : "Checking"}</small>
+            <small>{item.state === "demo" ? (locale === "ko" ? "데모" : "Demo") : item.state === "missing" ? (locale === "ko" ? "키 필요" : "Needs key") : item.state === "configured" ? (locale === "ko" ? "준비" : "Ready") : item.state === "connected" ? (locale === "ko" ? "연결됨" : "Live") : (locale === "ko" ? "확인 중" : "Checking")}</small>
           </span>
         ))}
       </div>

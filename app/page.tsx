@@ -29,6 +29,7 @@ import type { ComplianceResult } from "@/types/compliance";
 import type { GenerationResult } from "@/types/generation";
 import type { MediaAnalysisResult } from "@/types/media";
 import type { ApplicationGenerationResult } from "@/types/application";
+import type { Locale } from "@/types/locale";
 
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
 const initialSteps: PipelineStepState[] = [
@@ -243,6 +244,7 @@ async function optimizeImageFile(file: File): Promise<File> {
 }
 
 export default function Home() {
+  const [locale, setLocale] = useState<Locale>("ko");
   const [workMode, setWorkMode] = useState<WorkMode>("apply");
   const [campaignUrl, setCampaignUrl] = useState("");
   const [applicantKeywords, setApplicantKeywords] = useState("");
@@ -265,6 +267,9 @@ export default function Home() {
   useEffect(() => {
     uploadsRef.current = uploads;
   }, [uploads]);
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
   useEffect(() => () => uploadsRef.current.forEach((item) => URL.revokeObjectURL(item.preview)), []);
 
   const updateStep = useCallback((id: PipelineStepId, status: PipelineStepState["status"], error?: string) => {
@@ -317,17 +322,17 @@ export default function Home() {
   const loadSample = useCallback(async () => {
     setCampaignUrl("https://example.com/campaign/reviewforge-demo");
     if (workMode === "apply") {
-      setApplicantKeywords("28 years old, working couple in Gangnam, food explorer, enjoys writing");
+      setApplicantKeywords(locale === "ko" ? "28세, 강남 직장인 커플, 맛집 탐방과 글쓰기를 좋아함" : "28 years old, working couple in Gangnam, food explorer, enjoys writing");
     } else {
       const files = await createSampleFiles();
       setUploads((current) => {
         current.forEach((item) => URL.revokeObjectURL(item.preview));
         return files.map((file) => ({ id: crypto.randomUUID(), file, preview: URL.createObjectURL(file) }));
       });
-      setPersonalNote("I liked the balance of the main dish's mild flavor and crisp texture. The space was calm enough to take photos comfortably, and the food arrived warm.");
+      setPersonalNote(locale === "ko" ? "메인 메뉴의 담백한 맛과 바삭한 식감의 조합이 좋았어요. 매장이 차분해서 사진을 편하게 찍을 수 있었고 음식은 따뜻하게 나왔습니다." : "I liked the balance of the main dish's mild flavor and crisp texture. The space was calm enough to take photos comfortably, and the food arrived warm.");
     }
     setFormError("");
-  }, [workMode]);
+  }, [locale, workMode]);
 
   const handleGenerate = async () => {
     setFormError("");
@@ -364,7 +369,7 @@ export default function Home() {
         await fetch("/api/analyze-campaign", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: campaignUrl }),
+          body: JSON.stringify({ url: campaignUrl, language: locale }),
         }),
       );
       requirements = result.requirements;
@@ -390,7 +395,7 @@ export default function Home() {
             await fetch("/api/generate-application", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ requirements, applicantKeywords }),
+              body: JSON.stringify({ requirements, applicantKeywords, language: locale }),
             }),
           );
           setApplication(result);
@@ -409,6 +414,7 @@ export default function Home() {
     updateStep("media", "running");
     try {
       const form = new FormData();
+      form.set("language", locale);
       uploads.forEach((item) => form.append("files", item.file, item.file.name));
       const result = await readResponse<MediaAnalysisResult>(
         await fetch("/api/analyze-media", { method: "POST", body: form }),
@@ -429,6 +435,7 @@ export default function Home() {
       form.set("requirements", JSON.stringify(requirements));
       form.set("media", JSON.stringify(mediaItems));
       form.set("personalNote", personalNote);
+      form.set("language", locale);
       uploads.forEach((item) => form.append("files", item.file, item.file.name));
       generated = await readResponse<GenerationResult>(await fetch("/api/generate", { method: "POST", body: form }));
       setGeneration(generated);
@@ -478,6 +485,7 @@ export default function Home() {
     [steps, visibleStepIds],
   );
   const totalSteps = workMode === "apply" ? 2 : 4;
+  const ko = locale === "ko";
 
   return (
     <main>
@@ -487,12 +495,18 @@ export default function Home() {
           REVIEWFORGE
         </a>
         <nav>
-          <a href="#forge">Forge</a>
-          <a href="#pipeline">How it works</a>
-          <a href="#results">Output</a>
+          <a href="#forge">{ko ? "만들기" : "Forge"}</a>
+          <a href="#pipeline">{ko ? "작동 방식" : "How it works"}</a>
+          <a href="#results">{ko ? "결과" : "Output"}</a>
         </nav>
-        <div className={`mode-pill ${DEMO_MODE ? "is-demo" : "is-real"}`}>
-          <i /> {DEMO_MODE ? "DEMO MODE" : "REAL MODE"}
+        <div className="header-actions">
+          <div className="language-switch" aria-label="Language">
+            <button type="button" className={ko ? "is-active" : ""} onClick={() => setLocale("ko")}>한국어</button>
+            <button type="button" className={!ko ? "is-active" : ""} onClick={() => setLocale("en")}>EN</button>
+          </div>
+          <div className={`mode-pill ${DEMO_MODE ? "is-demo" : "is-real"}`}>
+            <i /> {DEMO_MODE ? "DEMO MODE" : "REAL MODE"}
+          </div>
         </div>
       </header>
 
@@ -500,27 +514,27 @@ export default function Home() {
         <section className="hero">
           <div className="hero-copy">
             <div className="eyebrow"><span>LOCAL EXPERIENCE AGENT / 01</span><i /></div>
-            <h1>Get selected.<br /><em>Share the real visit.</em></h1>
-            <p>From getting selected to publishing a compliant review, built for real visits to restaurants, cafés, beauty studios, stays, and classes.</p>
-            <a href="#forge" className="hero-link">START FORGING <ArrowDown size={16} /></a>
+            <h1>{ko ? <>선정되고.<br /><em>진짜 방문을 기록하세요.</em></> : <>Get selected.<br /><em>Share the real visit.</em></>}</h1>
+            <p>{ko ? "음식점, 카페, 뷰티샵, 숙박, 클래스 등 지역 방문형 체험단의 신청부터 미션에 맞는 후기 작성까지 함께합니다." : "From getting selected to publishing a compliant review, built for real visits to restaurants, cafés, beauty studios, stays, and classes."}</p>
+            <a href="#forge" className="hero-link">{ko ? "시작하기" : "START FORGING"} <ArrowDown size={16} /></a>
           </div>
         </section>
       </div>
 
       <section className="journey-shell" aria-labelledby="journey-title">
         <div className="journey-heading">
-          <span>CHOOSE YOUR MOMENT</span>
-          <h2 id="journey-title">Where are you in the journey?</h2>
+          <span>{ko ? "지금 필요한 단계" : "CHOOSE YOUR MOMENT"}</span>
+          <h2 id="journey-title">{ko ? "무엇을 도와드릴까요?" : "Where are you in the journey?"}</h2>
         </div>
         <div className="journey-tabs">
           <button type="button" className={workMode === "apply" ? "is-active" : ""} aria-pressed={workMode === "apply"} onClick={() => selectMode("apply")} disabled={running}>
             <span>01</span>
-            <div><strong>Apply</strong><small>Get selected with a campaign-specific application message.</small></div>
+            <div><strong>{ko ? "신청하기" : "Apply"}</strong><small>{ko ? "공고에 맞춘 신청 한마디로 선정 가능성을 높입니다." : "Get selected with a campaign-specific application message."}</small></div>
             <ArrowRight size={20} />
           </button>
           <button type="button" className={workMode === "review" ? "is-active" : ""} aria-pressed={workMode === "review"} onClick={() => selectMode("review")} disabled={running}>
             <span>02</span>
-            <div><strong>Write Review</strong><small>Turn your real visit into a mission-compliant review.</small></div>
+            <div><strong>{ko ? "후기 작성" : "Write Review"}</strong><small>{ko ? "실제 방문 경험을 미션에 맞는 후기로 완성합니다." : "Turn your real visit into a mission-compliant review."}</small></div>
             <ArrowRight size={20} />
           </button>
         </div>
@@ -530,18 +544,18 @@ export default function Home() {
         <div className="forge-header">
           <div>
             <span className="section-number">01</span>
-            <p>{workMode === "apply" ? "GET SELECTED" : "WRITE FROM YOUR VISIT"}</p>
-            <h2>{workMode === "apply" ? <>Campaign-specific.<br />Made for you.</> : <>Your real visit.<br />Mission-compliant.</>}</h2>
+            <p>{workMode === "apply" ? (ko ? "선정 가능성 높이기" : "GET SELECTED") : (ko ? "실제 방문으로 쓰기" : "WRITE FROM YOUR VISIT")}</p>
+            <h2>{workMode === "apply" ? (ko ? <>캠페인에 맞게.<br />나답게.</> : <>Campaign-specific.<br />Made for you.</>) : (ko ? <>진짜 방문을.<br />미션에 맞게.</> : <>Your real visit.<br />Mission-compliant.</>)}</h2>
           </div>
           <button type="button" className="sample-button" onClick={loadSample} disabled={running || processingUploads}>
-            <WandSparkles size={15} /> Load demo input
+            <WandSparkles size={15} /> {ko ? "데모 입력 채우기" : "Load demo input"}
           </button>
         </div>
 
         <div className={`forge-form ${workMode === "apply" ? "is-apply" : ""}`}>
           <div className="form-column form-campaign">
-            <label htmlFor="campaign-url"><span>01</span> Campaign URL</label>
-            <p>A public brief for a local restaurant, café, beauty, stay, or class campaign</p>
+            <label htmlFor="campaign-url"><span>01</span> {ko ? "캠페인 URL" : "Campaign URL"}</label>
+            <p>{ko ? "음식점, 카페, 뷰티, 숙박, 클래스 등 지역 방문형 체험단의 공개 공고" : "A public brief for a local restaurant, café, beauty, stay, or class campaign"}</p>
             <div className="url-input-wrap">
               <Link2 size={18} />
               <input
@@ -558,12 +572,12 @@ export default function Home() {
           {workMode === "apply" && (
             <div className="form-column form-note form-keywords">
               <div>
-                <label htmlFor="applicant-keywords"><span>02</span> Applicant Highlights <small>Optional</small></label>
-                <p>Add the personal strengths you want to highlight, separated by commas</p>
+                <label htmlFor="applicant-keywords"><span>02</span> {ko ? "나의 강점" : "Applicant Highlights"} <small>{ko ? "선택" : "Optional"}</small></label>
+                <p>{ko ? "신청 문구에서 강조할 개인 특성을 쉼표로 구분해 주세요" : "Add the personal strengths you want to highlight, separated by commas"}</p>
               </div>
               <textarea
                 id="applicant-keywords"
-                placeholder="e.g. 28, working couple in Gangnam, food explorer, enjoys writing"
+                placeholder={ko ? "예: 28세, 강남 직장인 커플, 맛집 탐방과 글쓰기를 좋아함" : "e.g. 28, working couple in Gangnam, food explorer, enjoys writing"}
                 value={applicantKeywords}
                 maxLength={500}
                 onChange={(event) => setApplicantKeywords(event.target.value)}
@@ -575,19 +589,19 @@ export default function Home() {
 
           {workMode === "review" && <>
           <div className="form-column form-media">
-            <label><span>02</span> Media Upload <small>{uploads.length.toString().padStart(2, "0")} / 12</small></label>
-            <p>Upload photos from your visit for GPU scene and quality analysis</p>
-            <MediaUploader items={uploads} onAdd={addFiles} onRemove={removeFile} disabled={running || processingUploads} />
+            <label><span>02</span> {ko ? "사진 업로드" : "Media Upload"} <small>{uploads.length.toString().padStart(2, "0")} / 12</small></label>
+            <p>{ko ? "직접 방문해 촬영한 사진을 올리면 GPU가 장면과 품질을 분석합니다" : "Upload photos from your visit for GPU scene and quality analysis"}</p>
+            <MediaUploader items={uploads} onAdd={addFiles} onRemove={removeFile} disabled={running || processingUploads} locale={locale} />
           </div>
 
           <div className="form-column form-note">
             <div>
-              <label htmlFor="personal-note"><span>03</span> Personal Note</label>
-              <p>Share what you actually experienced so the AI stays grounded</p>
+              <label htmlFor="personal-note"><span>03</span> {ko ? "나의 방문 메모" : "Personal Note"}</label>
+              <p>{ko ? "AI가 꾸며내지 않도록 방문 현장에서 직접 느낀 점을 적어 주세요" : "Share what you actually experienced so the AI stays grounded"}</p>
             </div>
             <textarea
               id="personal-note"
-              placeholder="e.g. The sauce had a rich, nutty flavor, and the window light made it easy to take photos."
+              placeholder={ko ? "예: 소스의 고소한 맛이 기억에 남았고 창가 자연광이 좋아 사진을 찍기 편했어요." : "e.g. The sauce had a rich, nutty flavor, and the window light made it easy to take photos."}
               value={personalNote}
               maxLength={4000}
               onChange={(event) => setPersonalNote(event.target.value)}
@@ -601,14 +615,14 @@ export default function Home() {
 
           <button type="button" className="generate-button" onClick={handleGenerate} disabled={running || processingUploads}>
             <span className="generate-icon">{running || processingUploads ? <LoaderCircle className="spin" size={22} /> : <Sparkles size={22} />}</span>
-            <span><strong>{processingUploads ? "Optimizing evidence…" : running ? "Agents are forging…" : workMode === "apply" ? "Create Application Messages" : "Create My Review"}</strong><small>{processingUploads ? "Preparing images" : running ? `${completedCount} / ${totalSteps} agents complete` : workMode === "apply" ? "Bright Data → Qwen Cloud" : "4 agents · 1 verified draft"}</small></span>
+            <span><strong>{processingUploads ? (ko ? "사진 최적화 중…" : "Optimizing evidence…") : running ? (ko ? "에이전트 작업 중…" : "Agents are forging…") : workMode === "apply" ? (ko ? "신청 문구 만들기" : "Create Application Messages") : (ko ? "후기 만들기" : "Create My Review")}</strong><small>{processingUploads ? (ko ? "이미지 준비 중" : "Preparing images") : running ? `${completedCount} / ${totalSteps} ${ko ? "에이전트 완료" : "agents complete"}` : workMode === "apply" ? "Bright Data → Qwen Cloud" : (ko ? "4개 에이전트 · 검증된 초안 1개" : "4 agents · 1 verified draft")}</small></span>
             <ArrowRight size={23} />
           </button>
         </div>
       </section>
 
       <div id="pipeline" className="pipeline-shell">
-        <PipelineProgress steps={steps} mode={workMode} />
+        <PipelineProgress steps={steps} mode={workMode} locale={locale} />
         {errors.length > 0 && (
           <div className="pipeline-errors">
             {errors.map((error, index) => (
@@ -625,29 +639,29 @@ export default function Home() {
               <div>
                 <span className="section-number">02</span>
                 <p>FORGED OUTPUT</p>
-                <h2>{running ? "Your evidence is being forged." : completedCount === totalSteps ? workMode === "apply" ? "Your first move, ready." : "One brief. One ready draft." : "Partial output, honestly reported."}</h2>
+                <h2>{running ? (ko ? "근거를 바탕으로 생성하고 있습니다." : "Your evidence is being forged.") : completedCount === totalSteps ? workMode === "apply" ? (ko ? "선정을 위한 첫 문장이 준비됐습니다." : "Your first move, ready.") : (ko ? "공고 하나, 준비된 후기 하나." : "One brief. One ready draft.") : (ko ? "완료된 결과만 정확히 보여드립니다." : "Partial output, honestly reported.")}</h2>
               </div>
               {!running && (
                 <button type="button" className="rerun-button" onClick={handleGenerate}>
-                  <RotateCcw size={15} /> Run again
+                  <RotateCcw size={15} /> {ko ? "다시 실행" : "Run again"}
                 </button>
               )}
             </div>
 
             <div className="results-stack">
               {workMode === "apply" ? (
-                campaign && application && <ApplicationResults requirements={campaign.requirements} result={application} />
+                campaign && application && <ApplicationResults result={application} locale={locale} />
               ) : (
                 <>
-                  <ExecutionReceipt campaign={campaign} media={media} generation={generation} compliance={compliance} />
-                  {campaign && <RequirementsCard requirements={campaign.requirements} />}
-                  {media && <MediaAndOrder media={media.items} generation={generation} uploads={uploads} />}
-                  {generation && <GeneratedContent generation={generation} uploads={uploads} />}
-                  {compliance && <ComplianceCard result={compliance} />}
+                  <ExecutionReceipt campaign={campaign} media={media} generation={generation} compliance={compliance} locale={locale} />
+                  {campaign && <RequirementsCard requirements={campaign.requirements} locale={locale} />}
+                  {media && <MediaAndOrder media={media.items} generation={generation} uploads={uploads} locale={locale} />}
+                  {generation && <GeneratedContent generation={generation} uploads={uploads} locale={locale} />}
+                  {compliance && <ComplianceCard result={compliance} locale={locale} />}
                 </>
               )}
               {running && (
-                <div className="results-loading"><LoaderCircle className="spin" size={20} /> Agent results are arriving one step at a time.</div>
+                <div className="results-loading"><LoaderCircle className="spin" size={20} /> {ko ? "에이전트 결과가 순서대로 도착하고 있습니다." : "Agent results are arriving one step at a time."}</div>
               )}
             </div>
           </>
@@ -660,13 +674,13 @@ export default function Home() {
         ) : (
           <div><span>REVIEW PIPELINE</span><strong>Bright Data</strong><ArrowRight size={14} /><strong>Nosana</strong><ArrowRight size={14} /><strong>Qwen Cloud</strong><ArrowRight size={14} /><strong>Daytona</strong></div>
         )}
-        <p><CheckCircle2 size={14} /> {DEMO_MODE ? "Demo fixtures · Real Mode keeps live provider calls" : "Live backend execution stages"}</p>
+        <p><CheckCircle2 size={14} /> {DEMO_MODE ? (ko ? "데모 데이터 · Real Mode는 실제 Provider 호출" : "Demo fixtures · Real Mode keeps live provider calls") : (ko ? "실제 백엔드 실행 단계" : "Live backend execution stages")}</p>
       </section>
 
       <footer>
         <div><Flame size={15} fill="currentColor" /> REVIEWFORGE</div>
-        <p>Grounded creation. Deterministic verification.</p>
-        <IntegrationStatus />
+        <p>{ko ? "실제 경험으로 생성하고, 코드로 검증합니다." : "Grounded creation. Deterministic verification."}</p>
+        <IntegrationStatus locale={locale} />
       </footer>
     </main>
   );

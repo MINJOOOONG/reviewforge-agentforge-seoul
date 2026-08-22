@@ -6,6 +6,7 @@ import type { ApplicationMessageVariant } from "@/types/application";
 import type { CampaignRequirements } from "@/types/campaign";
 import type { GenerationResult } from "@/types/generation";
 import type { MediaAnalysis } from "@/types/media";
+import type { Locale } from "@/types/locale";
 import { z } from "zod";
 
 type QwenMessageContent =
@@ -228,17 +229,20 @@ ${pageText.slice(0, 60_000)}`;
 
 const applicationMessagesSchema = z.object({
   variants: z.tuple([
-    z.object({ label: z.literal("Balanced"), message: z.string().min(1).max(1_000) }),
-    z.object({ label: z.literal("Content-focused"), message: z.string().min(1).max(1_000) }),
-    z.object({ label: z.literal("Concise"), message: z.string().min(1).max(500) }),
+    z.object({ label: z.string().min(1).max(100), message: z.string().min(1).max(1_000) }),
+    z.object({ label: z.string().min(1).max(100), message: z.string().min(1).max(1_000) }),
+    z.object({ label: z.string().min(1).max(100), message: z.string().min(1).max(500) }),
   ]),
 });
 
 export async function generateApplicationMessages(
   requirements: CampaignRequirements,
   applicantKeywords: string[] = [],
+  language: Locale = "en",
 ): Promise<{ variants: ApplicationMessageVariant[]; requestId?: string; model: string }> {
-  const prompt = `Using only the campaign analysis below, write three English application messages for a creator who has not yet been selected or visited.
+  const targetLanguage = language === "ko" ? "Korean" : "English";
+  const labels = language === "ko" ? ["기본형", "콘텐츠 강조형", "간결형"] : ["Balanced", "Content-focused", "Concise"];
+  const prompt = `Using only the campaign analysis below, write three ${targetLanguage} application messages for a creator who has not yet been selected or visited.
 
 Non-negotiable rules:
 - The creator has not yet visited, tasted, purchased, or used the service.
@@ -250,7 +254,7 @@ Non-negotiable rules:
 - Use only campaign names, business names, offers, selection criteria, missions, and visit conditions present in the JSON below.
 - Use future-facing language about what the creator will show if selected.
 - "Balanced" should be 2–3 natural sentences, "Content-focused" should show a clear mission plan in 2–3 sentences, and "Concise" should be 1–2 sentences.
-- Use the labels "Balanced", "Content-focused", and "Concise" in that order.
+- Use the labels ${JSON.stringify(labels)} in that order.
 
 CAMPAIGN REQUIREMENTS JSON:
 ${JSON.stringify(requirements)}
@@ -261,9 +265,9 @@ ${JSON.stringify(applicantKeywords)}
 Return only a JSON object in this shape:
 {
   "variants": [
-    { "label": "Balanced", "message": "" },
-    { "label": "Content-focused", "message": "" },
-    { "label": "Concise", "message": "" }
+    { "label": ${JSON.stringify(labels[0])}, "message": "" },
+    { "label": ${JSON.stringify(labels[1])}, "message": "" },
+    { "label": ${JSON.stringify(labels[2])}, "message": "" }
   ]
 }`;
 
@@ -294,6 +298,7 @@ export async function generateReview(input: {
   media: MediaAnalysis[];
   personalNote: string;
   images: QwenImage[];
+  language?: Locale;
 }): Promise<Omit<GenerationResult, "source"> & { requestId?: string; model: string }> {
   const evidence = {
     campaign: input.requirements,
@@ -301,7 +306,8 @@ export async function generateReview(input: {
     personalNote: input.personalNote,
   };
   const fileList = input.images.map((image) => image.fileName);
-  const textPrompt = `Write an English creator review using only the evidence below.
+  const targetLanguage = input.language === "ko" ? "Korean" : "English";
+  const textPrompt = `Write a ${targetLanguage} creator review using only the evidence below.
 
 Available evidence:
 1) Requirements extracted from the campaign page captured by Bright Data
@@ -316,7 +322,7 @@ Non-negotiable rules:
 - Write roughly 15% beyond the minimum character count.
 - Place every uploaded file exactly once using a [PHOTO: exact-file-name — English description] marker.
 - photoOrder.fileName may use only these files: ${JSON.stringify(fileList)}
-- Write applicationMessage as a 2–3 sentence pre-visit application message in English.
+- Write applicationMessage as a 2–3 sentence pre-visit application message in ${targetLanguage}.
 
 EVIDENCE JSON:
 ${JSON.stringify(evidence)}
