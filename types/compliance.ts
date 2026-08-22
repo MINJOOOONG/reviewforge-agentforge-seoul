@@ -1,4 +1,4 @@
-export type ComplianceStatus = "PASS" | "WARNING" | "FAIL";
+export type ComplianceStatus = "PASS" | "WARNING" | "FAIL" | "OPTIONAL" | "NA";
 
 export type ComplianceCheck = {
   name: string;

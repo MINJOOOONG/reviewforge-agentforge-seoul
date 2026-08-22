@@ -136,17 +136,25 @@ export function ExecutionReceipt({
 }
 
 export function RequirementsCard({ requirements }: { requirements: CampaignRequirements }) {
+  const review = requirements.reviewRequirements;
+  const keywordRules = requirements.keywordRules;
+  const minimumPhotos = review.minimumPhotos ?? requirements.minimumPhotos;
+  const minimumVideos = review.minimumVideos ?? (requirements.videoRequired ? 1 : 0);
+  const minimumCharacters = review.minimumCharacters ?? requirements.minimumCharacters;
   const requirementRows = [
-    ...requirements.requiredKeywords.map((keyword) => ({
+    ...keywordRules.requiredKeywords.map((keyword) => ({
       icon: Hash,
       label: keyword,
-      detail: `${requirements.minimumKeywordCounts[keyword] ?? 1}회 이상`,
+      detail: `${review.minimumKeywordCounts[keyword] ?? requirements.minimumKeywordCounts[keyword] ?? keywordRules.minimumOccurrences ?? 1}회 이상`,
     })),
-    { icon: ImageIcon, label: "필수 사진", detail: `${requirements.minimumPhotos}장 이상` },
-    { icon: Type, label: "본문 분량", detail: `${requirements.minimumCharacters.toLocaleString("ko-KR")}자 이상` },
-    ...(requirements.videoRequired ? [{ icon: Video, label: "필수 영상", detail: "1개 이상" }] : []),
+    ...keywordRules.titleKeywords.map((keyword) => ({ icon: Hash, label: `제목 · ${keyword}`, detail: "제목 포함" })),
+    ...keywordRules.bodyKeywords.map((keyword) => ({ icon: Hash, label: `본문 · ${keyword}`, detail: `${review.minimumKeywordCounts[keyword] ?? requirements.minimumKeywordCounts[keyword] ?? keywordRules.minimumOccurrences ?? 1}회 이상` })),
+    ...(minimumPhotos > 0 ? [{ icon: ImageIcon, label: "필수 사진", detail: `${minimumPhotos}장 이상` }] : []),
+    ...(minimumCharacters > 0 ? [{ icon: Type, label: "본문 분량", detail: `${minimumCharacters.toLocaleString("ko-KR")}자 이상` }] : []),
+    ...(minimumVideos > 0 ? [{ icon: Video, label: "필수 영상", detail: `${minimumVideos}개 이상` }] : []),
+    ...(review.mapLinkRequired ? [{ icon: Link2, label: "지도 위치 링크", detail: "필수" }] : []),
     ...requirements.requiredMentions.map((mention) => ({ icon: MessageCircleMore, label: mention, detail: "필수 언급" })),
-    ...requirements.requiredLinks.map((link) => ({ icon: Link2, label: "필수 링크", detail: link })),
+    ...review.requiredLinks.map((link) => ({ icon: Link2, label: "필수 링크", detail: link })),
   ];
 
   return (
@@ -181,13 +189,19 @@ export function RequirementsCard({ requirements }: { requirements: CampaignRequi
           );
         })}
       </div>
-      {(requirements.requiredHashtags.length > 0 || requirements.otherRequirements.length > 0) && (
+      {(review.requiredHashtags.length > 0 || review.otherRequiredMissions.length > 0 || requirements.selectionBoosters.length > 0 || requirements.conditionalRequirements.length > 0) && (
         <div className="requirement-footnotes">
-          {requirements.requiredHashtags.length > 0 && (
-            <div><span>HASHTAGS</span><p>{requirements.requiredHashtags.join("  ")}</p></div>
+          {review.requiredHashtags.length > 0 && (
+            <div><span>HASHTAGS</span><p>{review.requiredHashtags.join("  ")}</p></div>
           )}
-          {requirements.otherRequirements.length > 0 && (
-            <div><span>OTHER MISSIONS</span><p>{requirements.otherRequirements.join(" · ")}</p></div>
+          {review.otherRequiredMissions.length > 0 && (
+            <div><span>REQUIRED MISSIONS</span><p>{review.otherRequiredMissions.join(" · ")}</p></div>
+          )}
+          {requirements.selectionBoosters.length > 0 && (
+            <div><span>SELECTION BOOSTERS · OPTIONAL</span><p>{requirements.selectionBoosters.map((item) => item.description).join(" · ")}</p></div>
+          )}
+          {requirements.conditionalRequirements.length > 0 && (
+            <div><span>CONDITIONAL</span><p>{requirements.conditionalRequirements.map((item) => item.requirement).join(" · ")}</p></div>
           )}
         </div>
       )}
@@ -300,6 +314,7 @@ export function GeneratedContent({ generation, uploads }: { generation: Generati
 function CheckIcon({ status }: { status: ComplianceStatus }) {
   if (status === "PASS") return <CheckCircle2 size={18} />;
   if (status === "WARNING") return <AlertTriangle size={18} />;
+  if (status === "OPTIONAL" || status === "NA") return <MessageCircleMore size={18} />;
   return <XCircle size={18} />;
 }
 
@@ -308,7 +323,7 @@ function CheckGroup({ status, checks }: { status: ComplianceStatus; checks: Comp
   if (!filtered.length) return null;
   return (
     <div className={`qa-group qa-${status.toLowerCase()}`}>
-      <span>{status}</span>
+      <span>{status === "NA" ? "N/A" : status}</span>
       {filtered.map((check, index) => (
         <div className="qa-check" key={`${check.name}-${index}`}>
           <CheckIcon status={status} />
@@ -343,6 +358,8 @@ export function ComplianceCard({ result }: { result: ComplianceResult }) {
           <CheckGroup status="PASS" checks={result.checks} />
           <CheckGroup status="WARNING" checks={result.checks} />
           <CheckGroup status="FAIL" checks={result.checks} />
+          <CheckGroup status="OPTIONAL" checks={result.checks} />
+          <CheckGroup status="NA" checks={result.checks} />
         </div>
       </div>
     </section>

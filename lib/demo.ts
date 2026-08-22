@@ -12,7 +12,54 @@ export const DEMO_REQUIREMENTS: CampaignRequirements = {
   brand: "하루식탁",
   providedItems: ["시그니처 런치 2인 식사권"],
   recruitmentConditions: ["블로그 운영자", "직접 촬영한 사진으로 후기 작성 가능자"],
-  visitConditions: ["선정 후 예약 필수", "방문 후 7일 이내 포스팅"],
+  visitConditions: {
+    basePartySize: 2,
+    maxPartySize: 4,
+    additionalPersonFee: 30000,
+    additionalPersonAgeThreshold: 7,
+    petAllowed: true,
+    reservationRequired: true,
+    availableTimes: [],
+    parkingConditions: null,
+    companionConditions: ["최대 4인까지 방문 가능"],
+    otherConditions: ["방문 후 7일 이내 포스팅"],
+  },
+  reviewRequirements: {
+    minimumPhotos: 5,
+    minimumVideos: 1,
+    minimumCharacters: 700,
+    mapLinkRequired: true,
+    requiredLinks: ["https://map.naver.com"],
+    titleKeywords: ["성수맛집"],
+    bodyKeywords: ["성수맛집", "하루식탁"],
+    customKeywordRequired: true,
+    customKeywordCount: 1,
+    minimumKeywordCounts: { 성수맛집: 3, 하루식탁: 2 },
+    requiredHashtags: ["#성수맛집", "#하루식탁"],
+    otherRequiredMissions: ["메뉴와 매장 분위기를 함께 소개"],
+  },
+  keywordRules: {
+    requiredKeywords: ["성수맛집", "하루식탁"],
+    titleKeywords: ["성수맛집"],
+    bodyKeywords: ["성수맛집", "하루식탁"],
+    customKeywordRequired: true,
+    customKeywordCount: 1,
+    minimumOccurrences: 3,
+    appliesToTitle: true,
+    appliesToBody: true,
+  },
+  selectionBoosters: [
+    { type: "cross_post_social", description: "인스타그램 또는 페이스북 등 SNS 동시 리뷰 가능", required: false },
+    { type: "naver_clip", description: "네이버 클립 작성 가능", required: false },
+  ],
+  conditionalRequirements: [
+    {
+      condition: "naver_clip_enabled",
+      requirement: "클립 작성 시 최상단에 #협찬 해시태그 기재",
+      requiredHashtag: "#협찬",
+      position: "top",
+    },
+  ],
   requiredKeywords: ["성수맛집", "하루식탁"],
   minimumKeywordCounts: {
     성수맛집: 3,
@@ -123,20 +170,29 @@ ${extraMarkers}
 
 export type ComplianceInput = {
   requirements: CampaignRequirements;
+  title?: string;
   draft: string;
   uploadedPhotoCount: number;
   uploadedVideoCount: number;
   unverifiedClaims?: string[];
+  enabledConditions?: string[];
 };
 
 export function runDeterministicCompliance(input: ComplianceInput): Omit<ComplianceResult, "source"> {
   const checks: ComplianceResult["checks"] = [];
   const textLength = input.draft.replace(/\s/g, "").length;
+  const review = input.requirements.reviewRequirements;
+  const keywordRules = input.requirements.keywordRules;
+  const minimumPhotos = review.minimumPhotos ?? input.requirements.minimumPhotos;
+  const minimumVideos = review.minimumVideos ?? (input.requirements.videoRequired ? 1 : 0);
+  const minimumCharacters = review.minimumCharacters ?? input.requirements.minimumCharacters;
+  const minimumKeywordCounts = { ...review.minimumKeywordCounts, ...input.requirements.minimumKeywordCounts };
+  const requiredKeywords = Array.from(new Set([...keywordRules.requiredKeywords, ...input.requirements.requiredKeywords]));
 
-  for (const keyword of input.requirements.requiredKeywords) {
+  for (const keyword of requiredKeywords) {
     const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const actual = (input.draft.match(new RegExp(escaped, "g")) ?? []).length;
-    const expected = input.requirements.minimumKeywordCounts[keyword] ?? 1;
+    const expected = minimumKeywordCounts[keyword] ?? keywordRules.minimumOccurrences ?? 1;
     checks.push({
       name: `Keyword · ${keyword}`,
       status: actual >= expected ? "PASS" : "FAIL",
@@ -144,26 +200,38 @@ export function runDeterministicCompliance(input: ComplianceInput): Omit<Complia
     });
   }
 
+  for (const keyword of keywordRules.titleKeywords) {
+    const included = (input.title ?? "").includes(keyword);
+    checks.push({ name: `제목 키워드 · ${keyword}`, status: included ? "PASS" : "FAIL", detail: included ? "제목에 포함" : "제목에서 찾을 수 없음" });
+  }
+
+  for (const keyword of keywordRules.bodyKeywords) {
+    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const actual = (input.draft.match(new RegExp(escaped, "g")) ?? []).length;
+    const expected = minimumKeywordCounts[keyword] ?? keywordRules.minimumOccurrences ?? 1;
+    checks.push({ name: `본문 키워드 · ${keyword}`, status: actual >= expected ? "PASS" : "FAIL", detail: `${actual} / ${expected}회` });
+  }
+
   checks.push({
     name: "본문 글자 수",
-    status: textLength >= input.requirements.minimumCharacters ? "PASS" : "FAIL",
-    detail: `${textLength.toLocaleString("ko-KR")} / ${input.requirements.minimumCharacters.toLocaleString("ko-KR")}자`,
+    status: textLength >= minimumCharacters ? "PASS" : "FAIL",
+    detail: `${textLength.toLocaleString("ko-KR")} / ${minimumCharacters.toLocaleString("ko-KR")}자`,
   });
   checks.push({
     name: "업로드 사진",
-    status: input.uploadedPhotoCount >= input.requirements.minimumPhotos ? "PASS" : "FAIL",
-    detail: `${input.uploadedPhotoCount} / ${input.requirements.minimumPhotos}장`,
+    status: input.uploadedPhotoCount >= minimumPhotos ? "PASS" : "FAIL",
+    detail: `${input.uploadedPhotoCount} / ${minimumPhotos}장`,
   });
 
-  if (input.requirements.videoRequired) {
+  if (minimumVideos > 0) {
     checks.push({
       name: "필수 동영상",
-      status: input.uploadedVideoCount > 0 ? "PASS" : "FAIL",
-      detail: input.uploadedVideoCount > 0 ? `${input.uploadedVideoCount}개 업로드` : "필수지만 업로드되지 않음",
+      status: input.uploadedVideoCount >= minimumVideos ? "PASS" : "FAIL",
+      detail: `${input.uploadedVideoCount} / ${minimumVideos}개`,
     });
   }
 
-  for (const hashtag of input.requirements.requiredHashtags) {
+  for (const hashtag of Array.from(new Set([...review.requiredHashtags, ...input.requirements.requiredHashtags]))) {
     checks.push({
       name: `Hashtag · ${hashtag}`,
       status: input.draft.includes(hashtag) ? "PASS" : "FAIL",
@@ -171,12 +239,17 @@ export function runDeterministicCompliance(input: ComplianceInput): Omit<Complia
     });
   }
 
-  for (const link of input.requirements.requiredLinks) {
+  for (const link of Array.from(new Set([...review.requiredLinks, ...input.requirements.requiredLinks]))) {
     checks.push({
       name: "필수 링크",
       status: input.draft.includes(link) ? "PASS" : "FAIL",
       detail: input.draft.includes(link) ? link : `${link} 누락`,
     });
+  }
+
+  if (review.mapLinkRequired) {
+    const included = /(map\.naver\.com|place\.map\.kakao\.com|maps\.app\.goo\.gl|google\.[^/\s]+\/maps)/i.test(input.draft);
+    checks.push({ name: "지도 위치 링크", status: included ? "PASS" : "FAIL", detail: included ? "지도 링크 포함" : "지도 링크 누락" });
   }
 
   for (const mention of input.requirements.requiredMentions) {
@@ -195,12 +268,29 @@ export function runDeterministicCompliance(input: ComplianceInput): Omit<Complia
     });
   }
 
+  for (const booster of input.requirements.selectionBoosters) {
+    checks.push({ name: `선정 우대 · ${booster.description}`, status: "OPTIONAL", detail: "선택 우대사항 · 점수 제외" });
+  }
+
+  for (const conditional of input.requirements.conditionalRequirements) {
+    if (!(input.enabledConditions ?? []).includes(conditional.condition)) {
+      checks.push({ name: `조건부 · ${conditional.requirement}`, status: "NA", detail: `${conditional.condition} 미사용` });
+      continue;
+    }
+    const passed = !conditional.requiredHashtag
+      || (conditional.position === "top"
+        ? input.draft.split("\n").find((line) => line.trim())?.includes(conditional.requiredHashtag) === true
+        : input.draft.includes(conditional.requiredHashtag));
+    checks.push({ name: `조건부 · ${conditional.requirement}`, status: passed ? "PASS" : "FAIL", detail: passed ? "조건 충족" : "조건 미충족" });
+  }
+
   const summary = {
     pass: checks.filter((check) => check.status === "PASS").length,
     warning: checks.filter((check) => check.status === "WARNING").length,
     fail: checks.filter((check) => check.status === "FAIL").length,
   };
-  const possible = Math.max(checks.length, 1);
+  const scoredChecks = checks.filter((check) => ["PASS", "WARNING", "FAIL"].includes(check.status));
+  const possible = Math.max(scoredChecks.length, 1);
   const score = Math.round(((summary.pass + summary.warning * 0.5) / possible) * 100);
 
   return { score, checks, summary };

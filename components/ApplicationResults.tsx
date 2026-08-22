@@ -46,17 +46,38 @@ function SummaryDetail({ label, values }: { label: string; values: string[] }) {
 }
 
 export function ApplicationResults({ requirements, result }: ApplicationResultsProps) {
-  const keyMissions = Array.from(
-    new Set([
-      ...requirements.otherRequirements,
-      ...requirements.requiredMentions,
-      ...(requirements.requiredKeywords.length > 0
-        ? [`필수 키워드: ${requirements.requiredKeywords.join(", ")}`]
-        : []),
-      ...(requirements.minimumPhotos > 0 ? [`사진 ${requirements.minimumPhotos}장 이상`] : []),
-      ...(requirements.videoRequired ? ["영상 포함"] : []),
-    ]),
-  );
+  const visit = requirements.visitConditions;
+  const review = requirements.reviewRequirements;
+  const keywords = requirements.keywordRules;
+  const visitConditions = [
+    ...(visit.basePartySize !== null ? [`기준 ${visit.basePartySize}인`] : []),
+    ...(visit.maxPartySize !== null ? [`최대 ${visit.maxPartySize}인`] : []),
+    ...(visit.additionalPersonFee !== null
+      ? [`${visit.additionalPersonAgeThreshold !== null ? `${visit.additionalPersonAgeThreshold}세 이상 ` : ""}추가 인원 ${visit.additionalPersonFee.toLocaleString("ko-KR")}원`]
+      : []),
+    ...(visit.petAllowed !== null ? [`반려동물 동반 ${visit.petAllowed ? "가능" : "불가"}`] : []),
+    ...(visit.reservationRequired !== null ? [visit.reservationRequired ? "사전 예약 필수" : "사전 예약 불필요"] : []),
+    ...visit.availableTimes.map((value) => `방문 가능 시간: ${value}`),
+    ...(visit.parkingConditions ? [`주차: ${visit.parkingConditions}`] : []),
+    ...visit.companionConditions,
+    ...visit.otherConditions,
+  ];
+  const requiredMissions = Array.from(new Set([
+    ...(review.minimumPhotos !== null ? [`사진 최소 ${review.minimumPhotos}장`] : []),
+    ...(review.minimumVideos !== null && review.minimumVideos > 0 ? [`영상 최소 ${review.minimumVideos}개`] : []),
+    ...(review.minimumCharacters !== null ? [`본문 ${review.minimumCharacters.toLocaleString("ko-KR")}자 이상`] : []),
+    ...(review.mapLinkRequired ? ["지도 위치 링크 필수"] : []),
+    ...(keywords.titleKeywords.length > 0 ? [`제목 키워드: ${keywords.titleKeywords.join(", ")}`] : []),
+    ...(keywords.bodyKeywords.length > 0 ? [`본문 키워드: ${keywords.bodyKeywords.join(", ")}`] : []),
+    ...(keywords.minimumOccurrences !== null ? [`키워드 ${keywords.minimumOccurrences}회 이상`] : []),
+    ...(keywords.customKeywordRequired ? [`자율 키워드 ${keywords.customKeywordCount ?? 1}개 필수`] : []),
+    ...review.requiredLinks.map((value) => `필수 링크: ${value}`),
+    ...review.requiredHashtags.map((value) => `필수 해시태그: ${value}`),
+    ...review.otherRequiredMissions,
+    ...requirements.requiredMentions,
+  ]));
+  const selectionBoosters = requirements.selectionBoosters.map((item) => `↑ ${item.description}`);
+  const conditionalRequirements = requirements.conditionalRequirements.map((item) => `조건부 · ${item.requirement}`);
 
   return (
     <div className="apply-results">
@@ -87,8 +108,10 @@ export function ApplicationResults({ requirements, result }: ApplicationResultsP
         <div className="requirement-footnotes apply-summary-details">
           <SummaryDetail label="PROVIDED ITEMS" values={requirements.providedItems} />
           <SummaryDetail label="RECRUITMENT CONDITIONS" values={requirements.recruitmentConditions} />
-          <SummaryDetail label="VISIT CONDITIONS" values={requirements.visitConditions} />
-          <SummaryDetail label="KEY MISSIONS" values={keyMissions} />
+          <SummaryDetail label="VISIT CONDITIONS · 방문 조건" values={visitConditions} />
+          <SummaryDetail label="REQUIRED REVIEW MISSIONS · 필수 리뷰 미션" values={requiredMissions} />
+          <SummaryDetail label="SELECTION BOOSTERS · 선정 우대사항" values={selectionBoosters} />
+          <SummaryDetail label="CONDITIONAL · 조건부 미션" values={conditionalRequirements} />
         </div>
       </section>
 

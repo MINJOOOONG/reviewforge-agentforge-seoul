@@ -1180,6 +1180,7 @@ textarea:focus-visible {
 .qa-pass > span, .qa-pass svg { color: var(--acid); }
 .qa-warning > span, .qa-warning svg { color: #ffbe55; }
 .qa-fail > span, .qa-fail svg { color: #ff7253; }
+.qa-optional > span, .qa-optional svg, .qa-na > span, .qa-na svg { color: #8e8f88; }
 
 .proof-strip {
   align-items: center;

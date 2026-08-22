@@ -7,25 +7,54 @@ import type { ComplianceResult } from "@/types/compliance";
 
 export type DaytonaComplianceInput = {
   requirements: CampaignRequirements;
+  title?: string;
   draft: string;
   uploadedPhotoCount: number;
   uploadedVideoCount: number;
   unverifiedClaims?: string[];
+  enabledConditions?: string[];
 };
 
 const verifier = String.raw`
 import { readFileSync } from "node:fs";
 
 const input = JSON.parse(readFileSync("input.json", "utf8"));
-const { requirements, draft, uploadedPhotoCount, uploadedVideoCount, unverifiedClaims = [] } = input;
+const { requirements, title = "", draft, uploadedPhotoCount, uploadedVideoCount, unverifiedClaims = [], enabledConditions = [] } = input;
 const checks = [];
 const count = (text, fragment) => fragment ? text.split(fragment).length - 1 : 0;
+const review = requirements.reviewRequirements || {};
+const keywordRules = requirements.keywordRules || {};
+const requiredKeywords = [...new Set([...(keywordRules.requiredKeywords || []), ...(requirements.requiredKeywords || [])])];
+const minimumKeywordCounts = { ...(review.minimumKeywordCounts || {}), ...(requirements.minimumKeywordCounts || {}) };
+const minimumPhotos = review.minimumPhotos ?? requirements.minimumPhotos ?? 0;
+const minimumVideos = review.minimumVideos ?? (requirements.videoRequired ? 1 : 0);
+const minimumCharacters = review.minimumCharacters ?? requirements.minimumCharacters ?? 0;
+const requiredLinks = [...new Set([...(review.requiredLinks || []), ...(requirements.requiredLinks || [])])];
+const requiredHashtags = [...new Set([...(review.requiredHashtags || []), ...(requirements.requiredHashtags || [])])];
 
-for (const keyword of requirements.requiredKeywords) {
+for (const keyword of requiredKeywords) {
   const actual = count(draft, keyword);
-  const expected = requirements.minimumKeywordCounts[keyword] ?? 1;
+  const expected = minimumKeywordCounts[keyword] ?? keywordRules.minimumOccurrences ?? 1;
   checks.push({
     name: "Keyword · " + keyword,
+    status: actual >= expected ? "PASS" : "FAIL",
+    detail: actual + " / " + expected + "회",
+  });
+}
+
+for (const keyword of keywordRules.titleKeywords || []) {
+  checks.push({
+    name: "제목 키워드 · " + keyword,
+    status: title.includes(keyword) ? "PASS" : "FAIL",
+    detail: title.includes(keyword) ? "제목에 포함" : "제목에서 찾을 수 없음",
+  });
+}
+
+for (const keyword of keywordRules.bodyKeywords || []) {
+  const actual = count(draft, keyword);
+  const expected = minimumKeywordCounts[keyword] ?? keywordRules.minimumOccurrences ?? 1;
+  checks.push({
+    name: "본문 키워드 · " + keyword,
     status: actual >= expected ? "PASS" : "FAIL",
     detail: actual + " / " + expected + "회",
   });
@@ -34,36 +63,41 @@ for (const keyword of requirements.requiredKeywords) {
 const textLength = [...draft.replace(/\s/g, "")].length;
 checks.push({
   name: "본문 글자 수",
-  status: textLength >= requirements.minimumCharacters ? "PASS" : "FAIL",
-  detail: textLength + " / " + requirements.minimumCharacters + "자",
+  status: textLength >= minimumCharacters ? "PASS" : "FAIL",
+  detail: textLength + " / " + minimumCharacters + "자",
 });
 checks.push({
   name: "업로드 사진",
-  status: uploadedPhotoCount >= requirements.minimumPhotos ? "PASS" : "FAIL",
-  detail: uploadedPhotoCount + " / " + requirements.minimumPhotos + "장",
+  status: uploadedPhotoCount >= minimumPhotos ? "PASS" : "FAIL",
+  detail: uploadedPhotoCount + " / " + minimumPhotos + "장",
 });
 
-if (requirements.videoRequired) {
+if (minimumVideos > 0) {
   checks.push({
     name: "필수 동영상",
-    status: uploadedVideoCount > 0 ? "PASS" : "FAIL",
-    detail: uploadedVideoCount > 0 ? uploadedVideoCount + "개 업로드" : "필수지만 업로드되지 않음",
+    status: uploadedVideoCount >= minimumVideos ? "PASS" : "FAIL",
+    detail: uploadedVideoCount + " / " + minimumVideos + "개",
   });
 }
 
-for (const hashtag of requirements.requiredHashtags) {
+for (const hashtag of requiredHashtags) {
   checks.push({
     name: "Hashtag · " + hashtag,
     status: draft.includes(hashtag) ? "PASS" : "FAIL",
     detail: draft.includes(hashtag) ? "본문에 포함" : "본문에서 찾을 수 없음",
   });
 }
-for (const link of requirements.requiredLinks) {
+for (const link of requiredLinks) {
   checks.push({
     name: "필수 링크",
     status: draft.includes(link) ? "PASS" : "FAIL",
     detail: draft.includes(link) ? link : link + " 누락",
   });
+}
+if (review.mapLinkRequired) {
+  const mapLinkPattern = /(map\.naver\.com|place\.map\.kakao\.com|maps\.app\.goo\.gl|google\.[^/\s]+\/maps)/i;
+  const included = mapLinkPattern.test(draft);
+  checks.push({ name: "지도 위치 링크", status: included ? "PASS" : "FAIL", detail: included ? "지도 링크 포함" : "지도 링크 누락" });
 }
 for (const mention of requirements.requiredMentions) {
   checks.push({
@@ -71,6 +105,22 @@ for (const mention of requirements.requiredMentions) {
     status: draft.includes(mention) ? "PASS" : "FAIL",
     detail: draft.includes(mention) ? "본문에 포함" : "본문에서 찾을 수 없음",
   });
+}
+for (const booster of requirements.selectionBoosters || []) {
+  checks.push({ name: "선정 우대 · " + booster.description, status: "OPTIONAL", detail: "선택 우대사항 · 점수 제외" });
+}
+for (const conditional of requirements.conditionalRequirements || []) {
+  if (!enabledConditions.includes(conditional.condition)) {
+    checks.push({ name: "조건부 · " + conditional.requirement, status: "NA", detail: conditional.condition + " 미사용" });
+    continue;
+  }
+  let passed = true;
+  if (conditional.requiredHashtag) {
+    passed = conditional.position === "top"
+      ? draft.split("\n").find((line) => line.trim())?.includes(conditional.requiredHashtag) === true
+      : draft.includes(conditional.requiredHashtag);
+  }
+  checks.push({ name: "조건부 · " + conditional.requirement, status: passed ? "PASS" : "FAIL", detail: passed ? "조건 충족" : "조건 미충족" });
 }
 for (const claim of unverifiedClaims) {
   checks.push({
@@ -85,7 +135,8 @@ const summary = {
   warning: checks.filter((check) => check.status === "WARNING").length,
   fail: checks.filter((check) => check.status === "FAIL").length,
 };
-const possible = Math.max(checks.length, 1);
+const scoredChecks = checks.filter((check) => ["PASS", "WARNING", "FAIL"].includes(check.status));
+const possible = Math.max(scoredChecks.length, 1);
 const score = Math.round(((summary.pass + summary.warning * 0.5) / possible) * 100);
 console.log(JSON.stringify({ score, checks, summary }));
 `;

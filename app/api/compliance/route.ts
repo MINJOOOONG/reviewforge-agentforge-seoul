@@ -20,10 +20,12 @@ export async function POST(request: Request) {
     }
     const input: DaytonaComplianceInput = {
       requirements: campaignRequirementsSchema.parse(raw.requirements),
+      title: typeof raw.title === "string" ? raw.title : "",
       draft: raw.draft,
       uploadedPhotoCount: Number(raw.uploadedPhotoCount || 0),
       uploadedVideoCount: Number(raw.uploadedVideoCount || 0),
       unverifiedClaims: Array.isArray(raw.unverifiedClaims) ? raw.unverifiedClaims.map(String) : [],
+      enabledConditions: Array.isArray(raw.enabledConditions) ? raw.enabledConditions.map(String).slice(0, 30) : [],
     };
 
     if (isDemoMode()) {
