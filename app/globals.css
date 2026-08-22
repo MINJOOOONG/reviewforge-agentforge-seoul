@@ -187,6 +187,12 @@ textarea:focus-visible {
   font-style: normal;
 }
 
+.hero h1 > span,
+.hero h1 > em {
+  display: block;
+  white-space: nowrap;
+}
+
 .hero-copy > p {
   color: #a5a49c;
   font-size: 16px;
@@ -233,11 +239,12 @@ textarea:focus-visible {
 }
 
 .journey-heading h2 {
-  font-size: clamp(28px, 3vw, 42px);
+  font-size: clamp(28px, 2vw, 34px);
   font-weight: 650;
   letter-spacing: -.035em;
   line-height: 1.05;
   margin: 12px 0 0;
+  white-space: nowrap;
 }
 
 .journey-tabs {
@@ -1262,6 +1269,7 @@ footer > p { color: #71726b; font-size: 9px; letter-spacing: .06em; }
   .hero { display: block; min-height: 470px; }
   .hero h1 { font-size: clamp(48px, 13.5vw, 58px); line-height: .94; word-break: keep-all; }
   .hero-copy > p { font-size: 14px; }
+  .hero-copy > p br { display: none; }
   .journey-shell { align-items: stretch; gap: 24px; grid-template-columns: 1fr; padding: 54px 18px 0; }
   .journey-tabs { grid-template-columns: 1fr; }
   .journey-tabs button + button { border-left: 1px solid var(--line); border-top: 0; }
