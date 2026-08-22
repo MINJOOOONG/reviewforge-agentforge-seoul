@@ -15,8 +15,8 @@ export async function POST(request: Request) {
     if (!isDemoMode()) assertRateLimit(request, "media", { limit: 6 });
     const form = await request.formData();
     const files = form.getAll("files").filter((value): value is File => value instanceof File);
-    if (!files.length) throw new ProviderError("Nosana", "사진을 한 장 이상 업로드해 주세요.", 400);
-    if (files.length > 12) throw new ProviderError("Nosana", "한 번에 최대 12장까지 분석할 수 있습니다.", 400);
+    if (!files.length) throw new ProviderError("Nosana", "Upload at least one photo.", 400);
+    if (files.length > 12) throw new ProviderError("Nosana", "A maximum of 12 photos can be analyzed at once.", 400);
 
     if (isDemoMode()) {
       providerLog("Nosana", "Demo GPU fixture loaded", { images: files.length });

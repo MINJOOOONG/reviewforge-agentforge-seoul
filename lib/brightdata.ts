@@ -27,10 +27,10 @@ function assertPublicHttpUrl(value: string) {
   try {
     url = new URL(value);
   } catch {
-    throw new ProviderError("Bright Data", "올바른 캠페인 URL을 입력해 주세요.", 400);
+    throw new ProviderError("Bright Data", "Enter a valid campaign URL.", 400);
   }
   if (!["http:", "https:"].includes(url.protocol)) {
-    throw new ProviderError("Bright Data", "HTTP 또는 HTTPS 공개 URL만 지원합니다.", 400);
+    throw new ProviderError("Bright Data", "Only public HTTP or HTTPS URLs are supported.", 400);
   }
   const host = url.hostname.toLowerCase();
   const blocked =
@@ -44,7 +44,7 @@ function assertPublicHttpUrl(value: string) {
     /^169\.254\./.test(host) ||
     /^172\.(1[6-9]|2\d|3[01])\./.test(host);
   if (blocked) {
-    throw new ProviderError("Bright Data", "공개 인터넷에서 접근 가능한 캠페인 URL만 지원합니다.", 400);
+    throw new ProviderError("Bright Data", "The campaign URL must be accessible from the public internet.", 400);
   }
   return url.toString();
 }
@@ -53,7 +53,7 @@ async function requestUrl(url: string) {
   const apiKey = getApiKey();
   const zone = getZone();
   if (!apiKey || !zone) {
-    throw new ProviderError("Bright Data", "Bright Data API key 또는 Web Unlocker zone이 설정되지 않았습니다.", 503);
+    throw new ProviderError("Bright Data", "The Bright Data API key or Web Unlocker zone is not configured.", 503);
   }
 
   providerLog("BrightData", "Fetching campaign...", { hostname: new URL(url).hostname });

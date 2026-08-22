@@ -41,8 +41,8 @@ const keywordRulesSchema = z.object({
 }).default({});
 
 export const campaignRequirementsSchema = z.object({
-  campaignName: z.string().max(300).default("캠페인명 미확인"),
-  brand: z.string().max(200).default("브랜드 미확인"),
+  campaignName: z.string().max(300).default("Campaign name not identified"),
+  brand: z.string().max(200).default("Brand not identified"),
   providedItems: z.array(z.string().max(300)).max(30).default([]),
   recruitmentConditions: z.array(z.string().max(500)).max(30).default([]),
   visitConditions: visitConditionsSchema,

@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       throw new ProviderError("Qwen Cloud", "Campaign or media evidence is missing", 400);
     }
     if (personalNote.length > 4_000) {
-      throw new ProviderError("Qwen Cloud", "Personal Note는 4,000자 이하로 입력해 주세요.", 400);
+      throw new ProviderError("Qwen Cloud", "Personal Note must be 4,000 characters or fewer.", 400);
     }
 
     const requirements = campaignRequirementsSchema.parse(JSON.parse(requirementsRaw));
@@ -48,11 +48,11 @@ export async function POST(request: Request) {
     const images = await Promise.all(
       files.slice(0, 12).map(async (file) => {
         if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-          throw new ProviderError("Qwen Cloud", `${file.name}: 지원하지 않는 이미지 형식입니다.`, 400);
+          throw new ProviderError("Qwen Cloud", `${file.name}: unsupported image format.`, 400);
         }
         totalBytes += file.size;
         if (file.size > 8 * 1024 * 1024 || totalBytes > 28 * 1024 * 1024) {
-          throw new ProviderError("Qwen Cloud", "이미지는 장당 8MB, 전체 28MB 이하여야 합니다.", 413);
+          throw new ProviderError("Qwen Cloud", "Images must be 8 MB or less each and 28 MB or less in total.", 413);
         }
         const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
         return { fileName: file.name, mimeType: file.type, dataUrl: `data:${file.type};base64,${base64}` };

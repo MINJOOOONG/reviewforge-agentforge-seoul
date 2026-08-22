@@ -43,10 +43,10 @@ export function isConfigured() {
 function assertImage(file: File) {
   const validTypes = ["image/jpeg", "image/png", "image/webp"];
   if (!validTypes.includes(file.type)) {
-    throw new ProviderError("Nosana", `${file.name}: 지원하지 않는 파일 형식입니다.`, 400);
+    throw new ProviderError("Nosana", `${file.name}: unsupported file format.`, 400);
   }
   if (file.size > 8 * 1024 * 1024) {
-    throw new ProviderError("Nosana", `${file.name}: 사진당 최대 크기는 8MB입니다.`, 400);
+    throw new ProviderError("Nosana", `${file.name}: the maximum size is 8 MB per photo.`, 400);
   }
 }
 
@@ -95,8 +95,8 @@ async function analyzeOne(file: File): Promise<{ item: MediaAnalysis; runtime: N
 }
 
 export async function analyzeMedia(files: File[]): Promise<MediaAnalysisResult> {
-  if (!files.length) throw new ProviderError("Nosana", "분석할 사진을 한 장 이상 업로드해 주세요.", 400);
-  if (files.length > 12) throw new ProviderError("Nosana", "한 번에 최대 12장까지 분석할 수 있습니다.", 400);
+  if (!files.length) throw new ProviderError("Nosana", "Upload at least one photo for analysis.", 400);
+  if (files.length > 12) throw new ProviderError("Nosana", "A maximum of 12 photos can be analyzed at once.", 400);
   providerLog("Nosana", "Running GPU inference...", { images: files.length });
 
   try {

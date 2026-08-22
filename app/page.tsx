@@ -54,8 +54,8 @@ async function readResponse<T>(response: Response): Promise<T> {
 
 function emptyRequirements(sourceUrl: string): CampaignRequirements {
   return {
-    campaignName: "캠페인 분석 실패",
-    brand: "미확인",
+    campaignName: "Campaign analysis unavailable",
+    brand: "Not identified",
     providedItems: [],
     recruitmentConditions: [],
     visitConditions: {
@@ -202,7 +202,7 @@ async function createSampleFiles() {
       canvas.height = 800;
       drawSamplePhoto(canvas, index);
       const blob = await new Promise<Blob>((resolve, reject) =>
-        canvas.toBlob((value) => (value ? resolve(value) : reject(new Error("샘플 이미지 생성 실패"))), "image/png"),
+        canvas.toBlob((value) => (value ? resolve(value) : reject(new Error("Could not create the sample image"))), "image/png"),
       );
       return new File([blob], name, { type: "image/png" });
     }),
@@ -224,7 +224,7 @@ async function optimizeImageFile(file: File): Promise<File> {
       canvas.width = Math.max(1, Math.round(bitmap.width * scale));
       canvas.height = Math.max(1, Math.round(bitmap.height * scale));
       const context = canvas.getContext("2d", { alpha: false });
-      if (!context) throw new Error("이미지 최적화 컨텍스트를 만들 수 없습니다.");
+      if (!context) throw new Error("Could not create an image optimization context.");
       context.fillStyle = "#ffffff";
       context.fillRect(0, 0, canvas.width, canvas.height);
       context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
@@ -234,7 +234,7 @@ async function optimizeImageFile(file: File): Promise<File> {
       scale *= 0.82;
     }
 
-    if (!best) throw new Error("이미지를 최적화하지 못했습니다.");
+    if (!best) throw new Error("Could not optimize the image.");
     const baseName = file.name.replace(/\.[^.]+$/, "") || "review-photo";
     return new File([best], `${baseName}.webp`, { type: "image/webp", lastModified: file.lastModified });
   } finally {
@@ -289,7 +289,7 @@ export default function Home() {
     setFormError("");
     const remaining = Math.max(0, 12 - uploadsRef.current.length);
     const allowed = files.filter((file) => file.size <= 18 * 1024 * 1024).slice(0, remaining);
-    if (allowed.length < files.length) setFormError("사진은 최대 12장, 원본 장당 18MB까지 추가할 수 있습니다.");
+    if (allowed.length < files.length) setFormError("You can add up to 12 photos, with a maximum original size of 18 MB each.");
     if (!allowed.length) return;
 
     setProcessingUploads(true);
@@ -300,7 +300,7 @@ export default function Home() {
         ...optimized.map((file) => ({ id: crypto.randomUUID(), file, preview: URL.createObjectURL(file) })),
       ]);
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "사진 최적화에 실패했습니다.");
+      setFormError(error instanceof Error ? error.message : "Image optimization failed.");
     } finally {
       setProcessingUploads(false);
     }
@@ -317,14 +317,14 @@ export default function Home() {
   const loadSample = useCallback(async () => {
     setCampaignUrl("https://example.com/campaign/reviewforge-demo");
     if (workMode === "apply") {
-      setApplicantKeywords("28세, 강남 직장인 커플, 여성, 글쓰기와 맛집 탐방을 좋아함");
+      setApplicantKeywords("28 years old, working couple in Gangnam, food explorer, enjoys writing");
     } else {
       const files = await createSampleFiles();
       setUploads((current) => {
         current.forEach((item) => URL.revokeObjectURL(item.preview));
         return files.map((file) => ({ id: crypto.randomUUID(), file, preview: URL.createObjectURL(file) }));
       });
-      setPersonalNote("메인 메뉴의 담백한 맛과 바삭한 식감의 조합이 좋았어요. 매장은 차분해서 사진을 천천히 찍기 좋았고, 음식은 따뜻한 상태로 나왔습니다.");
+      setPersonalNote("I liked the balance of the main dish's mild flavor and crisp texture. The space was calm enough to take photos comfortably, and the food arrived warm.");
     }
     setFormError("");
   }, [workMode]);
@@ -338,9 +338,9 @@ export default function Home() {
     } catch {
       validUrl = false;
     }
-    if (!validUrl) return setFormError("공개된 캠페인 URL을 입력해 주세요.");
-    if (workMode === "review" && !uploads.length) return setFormError("분석할 사진을 한 장 이상 업로드해 주세요.");
-    if (workMode === "review" && !personalNote.trim()) return setFormError("환각을 막을 수 있도록 직접 느낀 점을 한 줄 이상 적어 주세요.");
+    if (!validUrl) return setFormError("Enter a valid public campaign URL.");
+    if (workMode === "review" && !uploads.length) return setFormError("Upload at least one visit photo for analysis.");
+    if (workMode === "review" && !personalNote.trim()) return setFormError("Add at least one firsthand note so the draft stays grounded.");
 
     setRunning(true);
     setHasRun(true);
@@ -380,7 +380,7 @@ export default function Home() {
 
     if (workMode === "apply") {
       if (!campaignSucceeded) {
-        const message = "캠페인 근거를 확보하지 못해 신청 문구를 생성하지 않았습니다.";
+        const message = "The application message was not generated because the campaign source could not be verified.";
         setErrors((current) => [...current, { provider: "Qwen Cloud", message }]);
         updateStep("generate", "error", message);
       } else {
@@ -482,7 +482,7 @@ export default function Home() {
   return (
     <main>
       <header className="site-header">
-        <a className="brand" href="#top" aria-label="ReviewForge 홈">
+        <a className="brand" href="#top" aria-label="ReviewForge home">
           <span><Flame size={18} fill="currentColor" /></span>
           REVIEWFORGE
         </a>
@@ -501,7 +501,7 @@ export default function Home() {
           <div className="hero-copy">
             <div className="eyebrow"><span>LOCAL EXPERIENCE AGENT / 01</span><i /></div>
             <h1>Get selected.<br /><em>Share the real visit.</em></h1>
-            <p>음식점, 카페, 뷰티샵, 숙박, 클래스 등 지역 방문형 체험단의 신청부터 실제 방문 후기와 미션 검수까지 함께합니다.</p>
+            <p>From getting selected to publishing a compliant review, built for real visits to restaurants, cafés, beauty studios, stays, and classes.</p>
             <a href="#forge" className="hero-link">START FORGING <ArrowDown size={16} /></a>
           </div>
         </section>
@@ -510,17 +510,17 @@ export default function Home() {
       <section className="journey-shell" aria-labelledby="journey-title">
         <div className="journey-heading">
           <span>CHOOSE YOUR MOMENT</span>
-          <h2 id="journey-title">무엇을 도와드릴까요?</h2>
+          <h2 id="journey-title">Where are you in the journey?</h2>
         </div>
         <div className="journey-tabs">
           <button type="button" className={workMode === "apply" ? "is-active" : ""} aria-pressed={workMode === "apply"} onClick={() => selectMode("apply")} disabled={running}>
             <span>01</span>
-            <div><strong>신청하기</strong><small>공고에 맞춘 신청 한마디로 선정 가능성을 높입니다.</small></div>
+            <div><strong>Apply</strong><small>Get selected with a campaign-specific application message.</small></div>
             <ArrowRight size={20} />
           </button>
           <button type="button" className={workMode === "review" ? "is-active" : ""} aria-pressed={workMode === "review"} onClick={() => selectMode("review")} disabled={running}>
             <span>02</span>
-            <div><strong>후기 작성</strong><small>실제 방문 사진과 경험을 미션에 맞는 후기로 완성합니다.</small></div>
+            <div><strong>Write Review</strong><small>Turn your real visit into a mission-compliant review.</small></div>
             <ArrowRight size={20} />
           </button>
         </div>
@@ -534,14 +534,14 @@ export default function Home() {
             <h2>{workMode === "apply" ? <>Campaign-specific.<br />Made for you.</> : <>Your real visit.<br />Mission-compliant.</>}</h2>
           </div>
           <button type="button" className="sample-button" onClick={loadSample} disabled={running || processingUploads}>
-            <WandSparkles size={15} /> 데모 입력 채우기
+            <WandSparkles size={15} /> Load demo input
           </button>
         </div>
 
         <div className={`forge-form ${workMode === "apply" ? "is-apply" : ""}`}>
           <div className="form-column form-campaign">
             <label htmlFor="campaign-url"><span>01</span> Campaign URL</label>
-            <p>음식점, 카페, 뷰티샵, 숙박, 클래스 등 지역 방문형 체험단의 공개 모집 페이지</p>
+            <p>A public brief for a local restaurant, café, beauty, stay, or class campaign</p>
             <div className="url-input-wrap">
               <Link2 size={18} />
               <input
@@ -558,12 +558,12 @@ export default function Home() {
           {workMode === "apply" && (
             <div className="form-column form-note form-keywords">
               <div>
-                <label htmlFor="applicant-keywords"><span>02</span> Applicant Highlights <small>선택</small></label>
-                <p>나이, 활동 지역, 관심사처럼 신청 문구에서 강조할 개인 특성을 쉼표로 구분해 주세요</p>
+                <label htmlFor="applicant-keywords"><span>02</span> Applicant Highlights <small>Optional</small></label>
+                <p>Add the personal strengths you want to highlight, separated by commas</p>
               </div>
               <textarea
                 id="applicant-keywords"
-                placeholder="예: 28세, 강남 직장인 커플, 여성, 글쓰기와 맛집 탐방을 좋아함"
+                placeholder="e.g. 28, working couple in Gangnam, food explorer, enjoys writing"
                 value={applicantKeywords}
                 maxLength={500}
                 onChange={(event) => setApplicantKeywords(event.target.value)}
@@ -576,18 +576,18 @@ export default function Home() {
           {workMode === "review" && <>
           <div className="form-column form-media">
             <label><span>02</span> Media Upload <small>{uploads.length.toString().padStart(2, "0")} / 12</small></label>
-            <p>직접 방문해 촬영한 사진을 올리면 GPU가 장면과 품질을 분석합니다</p>
+            <p>Upload photos from your visit for GPU scene and quality analysis</p>
             <MediaUploader items={uploads} onAdd={addFiles} onRemove={removeFile} disabled={running || processingUploads} />
           </div>
 
           <div className="form-column form-note">
             <div>
               <label htmlFor="personal-note"><span>03</span> Personal Note</label>
-              <p>AI가 꾸며내지 않도록, 방문 현장에서 직접 느낀 점을 Ground Truth로 남겨 주세요</p>
+              <p>Share what you actually experienced so the AI stays grounded</p>
             </div>
             <textarea
               id="personal-note"
-              placeholder="예: 소스의 고소한 맛이 기억에 남았고, 창가 쪽 자연광이 좋아 사진을 찍기 편했어요."
+              placeholder="e.g. The sauce had a rich, nutty flavor, and the window light made it easy to take photos."
               value={personalNote}
               maxLength={4000}
               onChange={(event) => setPersonalNote(event.target.value)}
@@ -601,7 +601,7 @@ export default function Home() {
 
           <button type="button" className="generate-button" onClick={handleGenerate} disabled={running || processingUploads}>
             <span className="generate-icon">{running || processingUploads ? <LoaderCircle className="spin" size={22} /> : <Sparkles size={22} />}</span>
-            <span><strong>{processingUploads ? "Optimizing evidence…" : running ? "Agents are forging…" : workMode === "apply" ? "신청 문구 만들기" : "후기 만들기"}</strong><small>{processingUploads ? "Preparing images" : running ? `${completedCount} / ${totalSteps} agents complete` : workMode === "apply" ? "Bright Data → Qwen Cloud" : "4 agents · 1 verified draft"}</small></span>
+            <span><strong>{processingUploads ? "Optimizing evidence…" : running ? "Agents are forging…" : workMode === "apply" ? "Create Application Messages" : "Create My Review"}</strong><small>{processingUploads ? "Preparing images" : running ? `${completedCount} / ${totalSteps} agents complete` : workMode === "apply" ? "Bright Data → Qwen Cloud" : "4 agents · 1 verified draft"}</small></span>
             <ArrowRight size={23} />
           </button>
         </div>
@@ -647,7 +647,7 @@ export default function Home() {
                 </>
               )}
               {running && (
-                <div className="results-loading"><LoaderCircle className="spin" size={20} /> 에이전트 결과가 순서대로 도착하고 있습니다.</div>
+                <div className="results-loading"><LoaderCircle className="spin" size={20} /> Agent results are arriving one step at a time.</div>
               )}
             </div>
           </>

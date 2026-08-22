@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "ReviewForge — Campaign-ready content, forged by agents",
   description:
-    "캠페인 조건, 사진, 실제 경험을 하나의 검증된 블로그 초안으로 만드는 Creator Agent",
+    "An AI creator agent that turns campaign requirements, visit photos, and firsthand notes into a verified blog draft.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

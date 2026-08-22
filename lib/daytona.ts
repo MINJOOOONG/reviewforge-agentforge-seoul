@@ -38,15 +38,15 @@ for (const keyword of requiredKeywords) {
   checks.push({
     name: "Keyword · " + keyword,
     status: actual >= expected ? "PASS" : "FAIL",
-    detail: actual + " / " + expected + "회",
+    detail: actual + " / " + expected + " uses",
   });
 }
 
 for (const keyword of keywordRules.titleKeywords || []) {
   checks.push({
-    name: "제목 키워드 · " + keyword,
+    name: "Title keyword · " + keyword,
     status: title.includes(keyword) ? "PASS" : "FAIL",
-    detail: title.includes(keyword) ? "제목에 포함" : "제목에서 찾을 수 없음",
+    detail: title.includes(keyword) ? "Included in title" : "Missing from title",
   });
 }
 
@@ -54,29 +54,29 @@ for (const keyword of keywordRules.bodyKeywords || []) {
   const actual = count(draft, keyword);
   const expected = minimumKeywordCounts[keyword] ?? keywordRules.minimumOccurrences ?? 1;
   checks.push({
-    name: "본문 키워드 · " + keyword,
+    name: "Body keyword · " + keyword,
     status: actual >= expected ? "PASS" : "FAIL",
-    detail: actual + " / " + expected + "회",
+    detail: actual + " / " + expected + " uses",
   });
 }
 
 const textLength = [...draft.replace(/\s/g, "")].length;
 checks.push({
-  name: "본문 글자 수",
+  name: "Body length",
   status: textLength >= minimumCharacters ? "PASS" : "FAIL",
-  detail: textLength + " / " + minimumCharacters + "자",
+  detail: textLength + " / " + minimumCharacters + " characters",
 });
 checks.push({
-  name: "업로드 사진",
+  name: "Uploaded photos",
   status: uploadedPhotoCount >= minimumPhotos ? "PASS" : "FAIL",
-  detail: uploadedPhotoCount + " / " + minimumPhotos + "장",
+  detail: uploadedPhotoCount + " / " + minimumPhotos + " photos",
 });
 
 if (minimumVideos > 0) {
   checks.push({
-    name: "필수 동영상",
+    name: "Required videos",
     status: uploadedVideoCount >= minimumVideos ? "PASS" : "FAIL",
-    detail: uploadedVideoCount + " / " + minimumVideos + "개",
+    detail: uploadedVideoCount + " / " + minimumVideos + " videos",
   });
 }
 
@@ -84,34 +84,34 @@ for (const hashtag of requiredHashtags) {
   checks.push({
     name: "Hashtag · " + hashtag,
     status: draft.includes(hashtag) ? "PASS" : "FAIL",
-    detail: draft.includes(hashtag) ? "본문에 포함" : "본문에서 찾을 수 없음",
+    detail: draft.includes(hashtag) ? "Included in body" : "Missing from body",
   });
 }
 for (const link of requiredLinks) {
   checks.push({
-    name: "필수 링크",
+    name: "Required link",
     status: draft.includes(link) ? "PASS" : "FAIL",
-    detail: draft.includes(link) ? link : link + " 누락",
+    detail: draft.includes(link) ? link : link + " missing",
   });
 }
 if (review.mapLinkRequired) {
   const mapLinkPattern = /(map\.naver\.com|place\.map\.kakao\.com|maps\.app\.goo\.gl|google\.[^/\s]+\/maps)/i;
   const included = mapLinkPattern.test(draft);
-  checks.push({ name: "지도 위치 링크", status: included ? "PASS" : "FAIL", detail: included ? "지도 링크 포함" : "지도 링크 누락" });
+  checks.push({ name: "Map location link", status: included ? "PASS" : "FAIL", detail: included ? "Map link included" : "Map link missing" });
 }
 for (const mention of requirements.requiredMentions) {
   checks.push({
-    name: "필수 언급 · " + mention,
+    name: "Required mention · " + mention,
     status: draft.includes(mention) ? "PASS" : "FAIL",
-    detail: draft.includes(mention) ? "본문에 포함" : "본문에서 찾을 수 없음",
+    detail: draft.includes(mention) ? "Included in body" : "Missing from body",
   });
 }
 for (const booster of requirements.selectionBoosters || []) {
-  checks.push({ name: "선정 우대 · " + booster.description, status: "OPTIONAL", detail: "선택 우대사항 · 점수 제외" });
+  checks.push({ name: "Selection booster · " + booster.description, status: "OPTIONAL", detail: "Optional · Excluded from score" });
 }
 for (const conditional of requirements.conditionalRequirements || []) {
   if (!enabledConditions.includes(conditional.condition)) {
-    checks.push({ name: "조건부 · " + conditional.requirement, status: "NA", detail: conditional.condition + " 미사용" });
+    checks.push({ name: "Conditional · " + conditional.requirement, status: "NA", detail: conditional.condition + " not enabled" });
     continue;
   }
   let passed = true;
@@ -120,13 +120,13 @@ for (const conditional of requirements.conditionalRequirements || []) {
       ? draft.split("\n").find((line) => line.trim())?.includes(conditional.requiredHashtag) === true
       : draft.includes(conditional.requiredHashtag);
   }
-  checks.push({ name: "조건부 · " + conditional.requirement, status: passed ? "PASS" : "FAIL", detail: passed ? "조건 충족" : "조건 미충족" });
+  checks.push({ name: "Conditional · " + conditional.requirement, status: passed ? "PASS" : "FAIL", detail: passed ? "Condition met" : "Condition not met" });
 }
 for (const claim of unverifiedClaims) {
   checks.push({
-    name: "사실 확인 · " + claim,
+    name: "Fact check · " + claim,
     status: "WARNING",
-    detail: "출처에서 확인되지 않아 단정하지 않음",
+    detail: "Not confirmed by the available evidence",
   });
 }
 

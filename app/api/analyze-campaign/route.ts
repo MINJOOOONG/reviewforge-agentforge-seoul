@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     if (!isDemoMode()) assertRateLimit(request, "campaign", { limit: 6 });
     const body = (await request.json()) as { url?: string };
     const url = body.url?.trim();
-    if (!url) throw new ProviderError("Bright Data", "캠페인 URL을 입력해 주세요.", 400);
+    if (!url) throw new ProviderError("Bright Data", "Enter a campaign URL.", 400);
 
     if (isDemoMode()) {
       providerLog("BrightData", "Demo fixture loaded", { url });

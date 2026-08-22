@@ -1,26 +1,56 @@
 # ReviewForge
 
-음식점, 카페, 뷰티샵, 숙박, 클래스 등 지역 방문형 체험단의 신청부터 방문 후기 작성과 미션 검수까지 돕는 AI Creator Agent.
+**An AI creator agent that helps local experience bloggers get selected, turn real visits into grounded reviews, and verify every campaign mission.**
 
-ReviewForge의 MVP 범위는 직접 방문하는 Local Experience Campaign이며, 제품을 배송받아 리뷰하는 Product Campaign은 포함하지 않는다.
+### [Try the live demo →](https://reviewforge-agentforge-seoul.vercel.app)
 
-## Problem
+ReviewForge was built for local experience campaigns—restaurants, cafés, beauty studios, stays, and classes that creators visit in person. Product-shipping campaigns are outside the scope of this MVP.
 
-지역 방문형 체험단 사용자는 공고마다 선정 가능성을 높일 신청 문구를 작성하고, 선정 후 직접 방문해 촬영한 사진과 경험을 정리한 뒤 리뷰 미션을 다시 확인해야 한다.
+## Why I Built It
 
-## Solution
+I am a power blogger who loves discovering great restaurants, cafés, and places through blogger experience campaigns. The experiences are exciting; the repetitive work around them is not.
 
-### Apply
+Every application asks for another carefully tailored message. After getting selected and completing the visit, I still have to organize photos, turn scattered notes into a full blog post, reread the campaign brief, count keywords, and check every mission before publishing. Some days, writing the post itself feels like the hardest part.
 
-Get selected with a campaign-specific application message.
+I built ReviewForge to automate that repetitive work without inventing the experience. It reads each campaign, helps me write a relevant application, turns my real photos and personal notes into a grounded draft, and verifies the result against the original mission in code.
 
-Campaign URL + Applicant Highlights → Campaign Analysis → Application Message
+## The Product
 
-### Write Review
+### Apply — Get Selected
 
-Turn your real visit into a compliant review.
+```text
+Campaign URL + Applicant Highlights
+→ Campaign Analysis
+→ Personalized Application Messages
+```
 
-Campaign URL + Visit Photos + Personal Note → Blog Draft → Compliance QA
+ReviewForge reads the actual campaign brief and creates three application options. Personal highlights—such as age, location, interests, or content strengths—are used only when the creator provides them.
+
+### Write Review — Stay Compliant
+
+```text
+Campaign URL + Visit Photos + Personal Note
+→ Media Analysis
+→ Grounded Blog Draft
+→ Mission Compliance QA
+```
+
+The draft is grounded in the campaign requirements, uploaded visit media, and the creator's firsthand notes. A deterministic verifier checks photo and video counts, length, keywords, hashtags, links, and conditional missions.
+
+## Sponsor Integrations
+
+- **Bright Data** — captures the public campaign page and provides source content for requirement extraction
+- **Qwen Cloud** — understands the campaign and generates application messages, titles, photo order, and review drafts
+- **Nosana** — runs GPU inference on uploaded visit media
+- **Daytona** — executes deterministic compliance checks in an isolated sandbox
+
+```text
+APPLY
+Bright Data → Qwen Cloud
+
+WRITE REVIEW
+Bright Data → Nosana → Qwen Cloud → Daytona
+```
 
 ## Tech Stack
 
@@ -31,32 +61,15 @@ Campaign URL + Visit Photos + Personal Note → Blog Draft → Compliance QA
 - Nosana
 - Daytona
 
-## Sponsor Integration
-
-- Bright Data — 체험단 공개 페이지 수집
-- Qwen Cloud — 캠페인 이해 및 콘텐츠 생성
-- Nosana — 업로드 미디어 GPU 분석
-- Daytona — 생성된 후기의 요구사항 코드 기반 검증
-
-## Flow
-
-```text
-APPLY
-Bright Data → Qwen Cloud
-
-WRITE REVIEW
-Bright Data → Nosana → Qwen Cloud → Daytona
-```
-
-## Run
+## Run Locally
 
 ```bash
 npm install
 npm run dev
 ```
 
-환경변수는 `.env.example` 참고.
+Copy the variable names from `.env.example` into `.env.local` and add your own credentials.
 
 ## Demo Mode
 
-API 인증정보 없이도 UI 및 전체 제품 흐름을 시연할 수 있는 Demo Mode를 지원한다.
+Demo Mode lets judges explore both end-to-end flows without API credentials. Real Mode keeps the same UI while calling the live sponsor integrations.

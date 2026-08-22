@@ -16,28 +16,28 @@ const definitions = [
     id: "campaign" as const,
     provider: "BRIGHT DATA",
     title: "Read campaign",
-    description: "공개 페이지에서 미션과 조건 추출",
+    description: "Extract missions and rules from the public brief",
     Icon: DatabaseZap,
   },
   {
     id: "media" as const,
     provider: "NOSANA",
     title: "See every frame",
-    description: "GPU에서 사진 품질과 장면 분류",
+    description: "Classify scenes and photo quality on GPU",
     Icon: ScanSearch,
   },
   {
     id: "generate" as const,
     provider: "QWEN CLOUD",
     title: "Write with evidence",
-    description: "사진과 메모에 근거한 후기 생성",
+    description: "Create a review grounded in photos and notes",
     Icon: Sparkles,
   },
   {
     id: "compliance" as const,
     provider: "DAYTONA",
     title: "Verify in code",
-    description: "샌드박스 코드로 조건 결정론적 검수",
+    description: "Verify every requirement with sandboxed code",
     Icon: TerminalSquare,
   },
 ];
@@ -47,14 +47,14 @@ const applyDefinitions = [
     id: "campaign" as const,
     provider: "BRIGHT DATA",
     title: "Read campaign",
-    description: "공개 공고에서 제공 내역과 모집 조건 추출",
+    description: "Extract the offer and selection criteria",
     Icon: DatabaseZap,
   },
   {
     id: "generate" as const,
     provider: "QWEN CLOUD",
     title: "Write to apply",
-    description: "방문 전 사실만 사용한 신청 문구 3종 생성",
+    description: "Create three honest pre-visit application messages",
     Icon: Sparkles,
   },
 ];
@@ -69,7 +69,7 @@ function StatusIcon({ status }: { status: PipelineStepStatus }) {
 export function PipelineProgress({ steps, mode = "review" }: { steps: PipelineStepState[]; mode?: "apply" | "review" }) {
   const visibleDefinitions = mode === "apply" ? applyDefinitions : definitions;
   return (
-    <section className="pipeline" aria-label="에이전트 파이프라인 진행 상태">
+    <section className="pipeline" aria-label="Agent pipeline progress">
       <div className="section-kicker">
         <span>{mode === "apply" ? "APPLICATION PIPELINE" : "LIVE AGENT PIPELINE"}</span>
         <span className="pipeline-route">{mode === "apply" ? "URL → CAMPAIGN → APPLICATION" : "URL → MEDIA → DRAFT → QA"}</span>

@@ -34,7 +34,7 @@ export function assertRateLimit(
   if (entry.count > options.limit) {
     throw new ProviderError(
       "ReviewForge",
-      `요청이 너무 많습니다. ${Math.ceil((entry.resetAt - now) / 1_000)}초 후 다시 시도해 주세요.`,
+      `Too many requests. Try again in ${Math.ceil((entry.resetAt - now) / 1_000)} seconds.`,
       429,
     );
   }

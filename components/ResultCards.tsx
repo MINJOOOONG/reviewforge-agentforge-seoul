@@ -51,7 +51,7 @@ function CopyButton({ value, compact = false }: { value: string; compact?: boole
       }}
     >
       {copied ? <ClipboardCheck size={15} /> : <Clipboard size={15} />}
-      {copied ? "복사됨" : "복사"}
+      {copied ? "Copied" : "Copy"}
     </button>
   );
 }
@@ -145,16 +145,16 @@ export function RequirementsCard({ requirements }: { requirements: CampaignRequi
     ...keywordRules.requiredKeywords.map((keyword) => ({
       icon: Hash,
       label: keyword,
-      detail: `${review.minimumKeywordCounts[keyword] ?? requirements.minimumKeywordCounts[keyword] ?? keywordRules.minimumOccurrences ?? 1}회 이상`,
+      detail: `${review.minimumKeywordCounts[keyword] ?? requirements.minimumKeywordCounts[keyword] ?? keywordRules.minimumOccurrences ?? 1}+ uses`,
     })),
-    ...keywordRules.titleKeywords.map((keyword) => ({ icon: Hash, label: `제목 · ${keyword}`, detail: "제목 포함" })),
-    ...keywordRules.bodyKeywords.map((keyword) => ({ icon: Hash, label: `본문 · ${keyword}`, detail: `${review.minimumKeywordCounts[keyword] ?? requirements.minimumKeywordCounts[keyword] ?? keywordRules.minimumOccurrences ?? 1}회 이상` })),
-    ...(minimumPhotos > 0 ? [{ icon: ImageIcon, label: "필수 사진", detail: `${minimumPhotos}장 이상` }] : []),
-    ...(minimumCharacters > 0 ? [{ icon: Type, label: "본문 분량", detail: `${minimumCharacters.toLocaleString("ko-KR")}자 이상` }] : []),
-    ...(minimumVideos > 0 ? [{ icon: Video, label: "필수 영상", detail: `${minimumVideos}개 이상` }] : []),
-    ...(review.mapLinkRequired ? [{ icon: Link2, label: "지도 위치 링크", detail: "필수" }] : []),
-    ...requirements.requiredMentions.map((mention) => ({ icon: MessageCircleMore, label: mention, detail: "필수 언급" })),
-    ...review.requiredLinks.map((link) => ({ icon: Link2, label: "필수 링크", detail: link })),
+    ...keywordRules.titleKeywords.map((keyword) => ({ icon: Hash, label: `Title · ${keyword}`, detail: "Include in title" })),
+    ...keywordRules.bodyKeywords.map((keyword) => ({ icon: Hash, label: `Body · ${keyword}`, detail: `${review.minimumKeywordCounts[keyword] ?? requirements.minimumKeywordCounts[keyword] ?? keywordRules.minimumOccurrences ?? 1}+ uses` })),
+    ...(minimumPhotos > 0 ? [{ icon: ImageIcon, label: "Required photos", detail: `${minimumPhotos}+` }] : []),
+    ...(minimumCharacters > 0 ? [{ icon: Type, label: "Body length", detail: `${minimumCharacters.toLocaleString("en-US")}+ characters` }] : []),
+    ...(minimumVideos > 0 ? [{ icon: Video, label: "Required videos", detail: `${minimumVideos}+` }] : []),
+    ...(review.mapLinkRequired ? [{ icon: Link2, label: "Map location link", detail: "Required" }] : []),
+    ...requirements.requiredMentions.map((mention) => ({ icon: MessageCircleMore, label: mention, detail: "Required mention" })),
+    ...review.requiredLinks.map((link) => ({ icon: Link2, label: "Required link", detail: link })),
   ];
 
   return (
@@ -174,7 +174,7 @@ export function RequirementsCard({ requirements }: { requirements: CampaignRequi
         <div className="campaign-deadline">
           <CalendarDays size={17} />
           <span>Deadline</span>
-          <strong>{requirements.deadline || "미확인"}</strong>
+          <strong>{requirements.deadline || "Not specified"}</strong>
         </div>
       </div>
       <div className="requirement-grid">

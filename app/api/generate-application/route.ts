@@ -13,31 +13,29 @@ export const runtime = "nodejs";
 export const maxDuration = 120;
 
 function demoApplicationVariants(requirements: CampaignRequirements, applicantKeywords: string[]): ApplicationMessageVariant[] {
-  const campaignName = requirements.campaignName || "해당 캠페인";
-  const brand = requirements.brand && requirements.brand !== "브랜드 미확인" ? requirements.brand : campaignName;
+  const campaignName = requirements.campaignName || "this campaign";
+  const brand = requirements.brand && requirements.brand !== "Brand not identified" ? requirements.brand : campaignName;
   const providedItem = requirements.providedItems[0];
   const keywordPlan = requirements.requiredKeywords.length
-    ? `${requirements.requiredKeywords.slice(0, 2).join(", ")} 키워드`
-    : "안내된 핵심 내용";
+    ? `the ${requirements.requiredKeywords.slice(0, 2).join(" and ")} keywords`
+    : "the campaign's key points";
   const mission = requirements.otherRequirements[0] || requirements.requiredMentions[0];
   const personalProfile = applicantKeywords.length > 0
-    ? `저는 ${applicantKeywords.join(", ")}의 특성을 가지고 있습니다. `
+    ? `My background includes ${applicantKeywords.join(", ")}. `
     : "";
 
   return [
     {
-      label: "기본형",
-      message: `${personalProfile}${campaignName}의 제공 내역과 모집 조건을 확인하고 신청합니다. 선정된다면 ${brand}의 특징과 ${
-        mission ? `${mission} 등 주요 미션` : "주요 미션"
-      }이 잘 전달되도록 가이드에 맞춰 꼼꼼하게 소개하겠습니다.`,
+      label: "Balanced",
+      message: `${personalProfile}I reviewed the offer and selection criteria for ${campaignName} and would love to apply. If selected, I will follow the brief carefully, communicate ${brand}'s character, and ${mission ? `cover this mission: ${mission}` : "complete every required mission"}.`,
     },
     {
-      label: "콘텐츠 강조형",
-      message: `${personalProfile}${providedItem ? `${providedItem} 제공 내용과 ` : ""}${keywordPlan}를 확인하고 ${campaignName}에 신청합니다. 선정된다면 요청된 구성과 방문 조건을 지키고, 저의 관심사와 강점을 살려 캠페인의 핵심이 명확히 전달되는 콘텐츠로 정성껏 작성하겠습니다.`,
+      label: "Content-focused",
+      message: `${personalProfile}I reviewed ${providedItem ? `the ${providedItem} offer and ` : ""}${keywordPlan} before applying to ${campaignName}. If selected, I will respect the visit conditions and use my interests and strengths to create clear, campaign-relevant content.`,
     },
     {
-      label: "간결형",
-      message: `${personalProfile}${brand} 캠페인에 신청합니다. 선정된다면 안내된 미션과 가이드를 꼼꼼히 반영해 소개하겠습니다.`,
+      label: "Concise",
+      message: `${personalProfile}I would love to join the ${brand} campaign. If selected, I will create a careful, engaging review that follows every mission in the brief.`,
     },
   ];
 }
