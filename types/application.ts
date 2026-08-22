@@ -5,6 +5,9 @@ export type ApplicationMessageVariant = {
 
 export type ApplicationGenerationResult = {
   variants: ApplicationMessageVariant[];
+  businessHighlights: string[];
+  researchSources: string[];
+  researchQuery?: string;
   source: {
     provider: "Qwen Cloud";
     mode: "real" | "demo";

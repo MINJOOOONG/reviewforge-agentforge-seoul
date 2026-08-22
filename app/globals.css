@@ -1180,6 +1180,13 @@ textarea:focus-visible {
 
 .apply-results { display: grid; gap: 20px; }
 .apply-messages { background: var(--paper-strong); border: 1px solid var(--line); padding: 34px; }
+.business-research-note { background: #e8edd2; border-radius: 28px; margin-bottom: 24px; padding: 24px 26px; }
+.business-research-note > span { color: #596329; font-size: 8px; font-weight: 800; letter-spacing: .15em; }
+.business-research-note h3 { font-size: clamp(22px, 2.4vw, 34px); letter-spacing: -.035em; margin: 8px 0 16px; }
+.business-research-note ul { display: grid; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.business-research-note li { font-size: 12px; line-height: 1.65; padding-left: 16px; position: relative; word-break: keep-all; }
+.business-research-note li::before { background: var(--orange); border-radius: 50%; content: ""; height: 6px; left: 0; position: absolute; top: .65em; width: 6px; }
+.business-research-note small { color: #6f7552; display: block; font-size: 8px; margin-top: 15px; }
 .apply-message-grid { display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .apply-message.application-card { align-self: stretch; padding: 24px; position: static; }
 .apply-message .result-heading { min-height: 78px; }

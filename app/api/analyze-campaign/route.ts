@@ -35,7 +35,9 @@ export async function POST(request: Request) {
     }
 
     const page = await fetchCampaign(url);
-    const extracted = await extractCampaignRequirements(page.content, page.url);
+    const extracted = await extractCampaignRequirements(page.content, page.url, {
+      language: body.language === "ko" ? "ko" : "en",
+    });
     return NextResponse.json<CampaignAnalysisResult>({
       requirements: extracted.requirements,
       source: {

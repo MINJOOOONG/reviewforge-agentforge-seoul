@@ -49,14 +49,14 @@ function assertPublicHttpUrl(value: string) {
   return url.toString();
 }
 
-async function requestUrl(url: string) {
+async function requestUrl(url: string, purpose = "campaign", timeoutMs = 75_000) {
   const apiKey = getApiKey();
   const zone = getZone();
   if (!apiKey || !zone) {
     throw new ProviderError("Bright Data", "The Bright Data API key or Web Unlocker zone is not configured.", 503);
   }
 
-  providerLog("BrightData", "Fetching campaign...", { hostname: new URL(url).hostname });
+  providerLog("BrightData", "Fetching public page...", { hostname: new URL(url).hostname, purpose });
   try {
     const response = await fetchWithTimeout(
       ENDPOINT,
@@ -73,10 +73,11 @@ async function requestUrl(url: string) {
           method: "GET",
           data_format: "markdown",
           debug: true,
+          ...(purpose === "naver-search" ? { country: "kr" } : {}),
           ...(optionalEnv("BRIGHT_DATA_RENDER") === "true" ? { render: "true" } : {}),
         }),
       },
-      75_000,
+      timeoutMs,
     );
 
     const raw = await response.text();
@@ -119,9 +120,81 @@ async function requestUrl(url: string) {
 
 export async function fetchCampaign(url: string) {
   const safeUrl = assertPublicHttpUrl(url);
-  const result = await requestUrl(safeUrl);
+  const result = await requestUrl(safeUrl, "campaign");
   const pageTitle = result.content.match(/^#\s+(.+)$/m)?.[1]?.trim();
   return { ...result, pageTitle, url: safeUrl };
+}
+
+function cleanSearchTerm(value: string) {
+  return value
+    .replace(/체험단|캠페인|리뷰어\s*모집|블로그\s*체험/gi, " ")
+    .replace(/[|｜].*$/, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 90);
+}
+
+export type NaverBusinessResearch = {
+  query: string;
+  content: string;
+  sourceUrls: string[];
+  requestIds: string[];
+};
+
+export async function fetchNaverBusinessResearch(
+  input: {
+    brand: string;
+    campaignName: string;
+    requiredKeywords: string[];
+    providedItems: string[];
+  },
+): Promise<NaverBusinessResearch> {
+  const brand = cleanSearchTerm(input.brand);
+  const campaignName = cleanSearchTerm(input.campaignName);
+  const placeholder = /not identified|not specified|unknown|미확인|알 수 없음/i;
+  const seed = !placeholder.test(brand) && brand.length >= 2 ? brand : campaignName;
+  if (!seed) return { query: "", content: "", sourceUrls: [], requestIds: [] };
+
+  const hints = [...input.requiredKeywords, ...input.providedItems]
+    .map(cleanSearchTerm)
+    .filter((value) => value && value !== seed && !placeholder.test(value));
+  const queries = Array.from(new Set([
+    [seed, hints[0]].filter(Boolean).join(" "),
+    [seed, hints[1], "특징 후기"].filter(Boolean).join(" "),
+  ])).map((query) => query.slice(0, 120)).slice(0, 2);
+  const searchUrls = queries.map((query) => `https://search.naver.com/search.naver?where=nexearch&query=${encodeURIComponent(query)}`);
+  providerLog("BrightData", "Searching Naver for business context...", { query: seed, searches: searchUrls.length });
+
+  const settled = await Promise.allSettled(
+    searchUrls.map((url) => requestUrl(assertPublicHttpUrl(url), "naver-search", 20_000)),
+  );
+  const successful = settled.flatMap((result, index) =>
+    result.status === "fulfilled" ? [{ ...result.value, url: searchUrls[index], query: queries[index] }] : [],
+  );
+
+  if (!successful.length) {
+    providerLog("BrightData", "Naver research unavailable; continuing with campaign page only", { query: seed });
+    return { query: seed, content: "", sourceUrls: [], requestIds: [] };
+  }
+
+  const content = successful
+    .map((result) => `NAVER QUERY: ${result.query}\n${result.content.slice(0, 18_000)}`)
+    .join("\n\n---\n\n");
+  const sourceUrls = Array.from(new Set([
+    ...successful.map((result) => result.url),
+  ])).slice(0, 20);
+
+  providerLog("BrightData", "Naver business research complete", {
+    query: seed,
+    searches: successful.length,
+    characters: content.length,
+  });
+  return {
+    query: seed,
+    content,
+    sourceUrls,
+    requestIds: successful.flatMap((result) => result.requestId ? [result.requestId] : []),
+  };
 }
 
 export async function healthCheck(probe = false) {
@@ -129,6 +202,6 @@ export async function healthCheck(probe = false) {
     return { ok: false, detail: "Bright Data key or Web Unlocker zone missing" };
   }
   if (!probe) return { ok: true, detail: `${getZone()} configured` };
-  const result = await requestUrl("https://geo.brdtest.com/welcome.txt");
+  const result = await requestUrl("https://geo.brdtest.com/welcome.txt", "health-check");
   return { ok: Boolean(result.content.trim()), detail: "Web Unlocker responded" };
 }

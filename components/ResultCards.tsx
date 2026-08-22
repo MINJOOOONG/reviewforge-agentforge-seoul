@@ -65,6 +65,27 @@ function ResultHeading({ index, label, title, aside }: { index: string; label: s
   );
 }
 
+function NoteLine({
+  label,
+  values,
+  locale,
+  empty,
+  accent = false,
+}: {
+  label: string;
+  values: string[];
+  locale: Locale;
+  empty?: string;
+  accent?: boolean;
+}) {
+  return (
+    <div className={`note-line ${accent ? "is-accent" : ""}`}>
+      <span>{label}</span>
+      <p>{values.length ? values.join(" · ") : (empty || (locale === "ko" ? "공고에 별도 안내 없음" : "Not specified"))}</p>
+    </div>
+  );
+}
+
 export function ExecutionReceipt({
   campaign,
   media,
@@ -175,13 +196,6 @@ export function RequirementsCard({ requirements, locale }: { requirements: Campa
     ...requirements.otherRequirements,
   ].filter(Boolean) as string[]));
 
-  const NoteLine = ({ label, values, empty, accent = false }: { label: string; values: string[]; empty?: string; accent?: boolean }) => (
-    <div className={`note-line ${accent ? "is-accent" : ""}`}>
-      <span>{label}</span>
-      <p>{values.length ? values.join(" · ") : (empty || (ko ? "공고에 별도 안내 없음" : "Not specified"))}</p>
-    </div>
-  );
-
   return (
     <section className="result-card requirements-card requirements-note-card">
       <ResultHeading
@@ -195,13 +209,14 @@ export function RequirementsCard({ requirements, locale }: { requirements: Campa
           <div><span>CAMPAIGN NOTE</span><strong>{requirements.campaignName}</strong><small>{requirements.brand}</small></div>
           <p><CalendarDays size={14} /> {ko ? "마감" : "Deadline"} · {requirements.deadline || (ko ? "미확인" : "Not specified")}</p>
         </div>
-        <NoteLine label={ko ? "제공 내역" : "WHAT YOU RECEIVE"} values={requirements.providedItems} />
-        <NoteLine label={ko ? "방문 조건" : "VISIT CONDITIONS"} values={visitSummary} />
-        <NoteLine label={ko ? "필수 키워드" : "REQUIRED KEYWORDS"} values={keywordSummary} />
-        <NoteLine label={ko ? "리뷰 미션" : "REVIEW MISSION"} values={reviewSummary} />
-        <NoteLine label={ko ? "필수 태그" : "REQUIRED TAGS"} values={requiredHashtags} empty={ko ? "필수 태그 없음" : "No required tags"} accent />
-        {requirements.selectionBoosters.length > 0 && <NoteLine label={ko ? "선정 팁" : "SELECTION TIPS"} values={requirements.selectionBoosters.map((item) => item.description)} />}
-        {requirements.conditionalRequirements.length > 0 && <NoteLine label={ko ? "조건부 안내" : "CONDITIONAL"} values={requirements.conditionalRequirements.map((item) => item.requirement)} />}
+        <NoteLine label={ko ? "제공 내역" : "WHAT YOU RECEIVE"} values={requirements.providedItems} locale={locale} />
+        <NoteLine label={ko ? "모집 조건" : "WHO CAN APPLY"} values={requirements.recruitmentConditions} locale={locale} />
+        <NoteLine label={ko ? "방문 조건" : "VISIT CONDITIONS"} values={visitSummary} locale={locale} />
+        <NoteLine label={ko ? "필수 키워드" : "REQUIRED KEYWORDS"} values={keywordSummary} locale={locale} />
+        <NoteLine label={ko ? "리뷰 미션" : "REVIEW MISSION"} values={reviewSummary} locale={locale} />
+        <NoteLine label={ko ? "필수 태그" : "REQUIRED TAGS"} values={requiredHashtags} locale={locale} empty={ko ? "필수 태그 없음" : "No required tags"} accent />
+        {requirements.selectionBoosters.length > 0 && <NoteLine label={ko ? "선정 팁" : "SELECTION TIPS"} values={requirements.selectionBoosters.map((item) => item.description)} locale={locale} />}
+        {requirements.conditionalRequirements.length > 0 && <NoteLine label={ko ? "조건부 안내" : "CONDITIONAL"} values={requirements.conditionalRequirements.map((item) => item.requirement)} locale={locale} />}
       </div>
     </section>
   );

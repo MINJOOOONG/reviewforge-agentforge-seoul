@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fetchNaverBusinessResearch } from "@/lib/brightdata";
 import { demoPause } from "@/lib/demo";
 import { isDemoMode } from "@/lib/env";
 import { apiError, ProviderError } from "@/lib/http";
@@ -14,11 +15,14 @@ export const runtime = "nodejs";
 export const maxDuration = 120;
 
 function demoApplicationVariants(requirements: CampaignRequirements, applicantKeywords: string[], language: Locale): ApplicationMessageVariant[] {
+  const highlight = language === "ko"
+    ? "제철 식재료를 활용한 시그니처 런치와 차분한 공간"
+    : "its seasonal signature lunch and calm dining concept";
   if (language === "ko") {
     const brand = requirements.brand || "해당 업체";
     const profile = applicantKeywords.length ? `저는 ${applicantKeywords.join(", ")}이라는 강점이 있습니다. ` : "";
     return [
-      { label: "기본형", message: `${profile}${brand} 캠페인의 제공 내용과 모집 조건을 확인하고 신청합니다. 선정된다면 방문 조건과 미션을 꼼꼼히 지켜 매력적인 후기를 작성하겠습니다.` },
+      { label: "기본형", message: `${profile}네이버 공개 정보에서 확인한 ${highlight}이 특히 궁금해 ${brand} 캠페인에 신청합니다. 선정된다면 방문 조건과 미션을 꼼꼼히 지켜 그 매력이 잘 전달되는 후기를 작성하겠습니다.` },
       { label: "콘텐츠 강조형", message: `${profile}${brand}의 메뉴와 공간이 잘 전달될 수 있도록 직접 촬영한 사진과 저만의 관점을 담아 소개하고 싶어 신청합니다. 선정된다면 공고의 키워드와 리뷰 미션을 빠짐없이 반영하겠습니다.` },
       { label: "간결형", message: `${profile}${brand} 캠페인에 신청합니다. 선정된다면 가이드를 꼼꼼히 반영한 정성스러운 후기를 작성하겠습니다.` },
     ];
@@ -37,7 +41,7 @@ function demoApplicationVariants(requirements: CampaignRequirements, applicantKe
   return [
     {
       label: "Balanced",
-      message: `${personalProfile}I reviewed the offer and selection criteria for ${campaignName} and would love to apply. If selected, I will follow the brief carefully, communicate ${brand}'s character, and ${mission ? `cover this mission: ${mission}` : "complete every required mission"}.`,
+      message: `${personalProfile}I was especially interested in ${highlight}, based on public Naver information, and would love to apply for ${campaignName}. If selected, I will follow the brief carefully and ${mission ? `cover this mission: ${mission}` : "complete every required mission"}.`,
     },
     {
       label: "Content-focused",
@@ -69,10 +73,16 @@ export async function POST(request: Request) {
           .map((keyword) => keyword.slice(0, 80))
       : [];
     if (isDemoMode()) {
+      const businessHighlights = language === "ko"
+        ? ["제철 식재료를 활용한 시그니처 런치", "차분한 공간과 정갈한 플레이팅"]
+        : ["A seasonal signature lunch", "A calm concept with careful plating"];
       providerLog("Qwen", "Demo pre-visit application variants loaded", { variants: 3 });
       await demoPause(620);
       return NextResponse.json<ApplicationGenerationResult>({
         variants: demoApplicationVariants(requirements, applicantKeywords, language),
+        businessHighlights,
+        researchSources: ["https://search.naver.com/search.naver?where=nexearch&query=%ED%95%98%EB%A3%A8%EC%8B%9D%ED%83%81%20%EC%84%B1%EC%88%98"],
+        researchQuery: language === "ko" ? "하루식탁 성수" : "Haru Table Seongsu",
         source: {
           provider: "Qwen Cloud",
           mode: "demo",
@@ -83,9 +93,23 @@ export async function POST(request: Request) {
       });
     }
 
-    const generated = await generateApplicationMessages(requirements, applicantKeywords, language);
+    const research = await fetchNaverBusinessResearch({
+      brand: requirements.brand,
+      campaignName: requirements.campaignName,
+      requiredKeywords: requirements.requiredKeywords,
+      providedItems: requirements.providedItems,
+    });
+    const generated = await generateApplicationMessages(
+      requirements,
+      applicantKeywords,
+      language,
+      research.content ? { query: research.query, content: research.content } : undefined,
+    );
     return NextResponse.json<ApplicationGenerationResult>({
       variants: generated.variants,
+      businessHighlights: generated.businessHighlights,
+      researchSources: research.content && generated.businessHighlights.length ? research.sourceUrls : [],
+      researchQuery: research.content && generated.businessHighlights.length ? research.query : undefined,
       source: {
         provider: "Qwen Cloud",
         mode: "real",
