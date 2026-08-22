@@ -1094,9 +1094,7 @@ textarea:focus-visible {
 .order-item p { color: #73746d; font-size: 10px; line-height: 1.45; margin: 0; }
 
 .generated-layout {
-  display: grid;
-  gap: 20px;
-  grid-template-columns: minmax(280px, .38fr) minmax(0, .62fr);
+  display: block;
 }
 
 .application-card { align-self: start; position: sticky; top: 20px; }

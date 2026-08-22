@@ -267,14 +267,8 @@ export function GeneratedContent({ generation, uploads }: { generation: Generati
 
   return (
     <section className="generated-layout">
-      <article className="result-card application-card">
-        <ResultHeading index="03" label="QWEN CLOUD" title="Application note" aside={<CopyButton value={generation.applicationMessage} compact />} />
-        <blockquote>{generation.applicationMessage}</blockquote>
-        <div className="generated-source"><Sparkles size={14} /> Grounded in campaign + personal note</div>
-      </article>
-
       <article className="result-card draft-card">
-        <ResultHeading index="04" label="QWEN CLOUD" title="Blog draft" aside={<CopyButton value={`${generation.title}\n\n${generation.blogDraft}`} />} />
+        <ResultHeading index="03" label="QWEN CLOUD" title="Blog draft" aside={<CopyButton value={`${generation.title}\n\n${generation.blogDraft}`} />} />
         <div className="draft-title-block">
           <span>GENERATED TITLE</span>
           <h3>{generation.title}</h3>
@@ -330,7 +324,7 @@ export function ComplianceCard({ result }: { result: ComplianceResult }) {
   return (
     <section className="result-card compliance-card">
       <ResultHeading
-        index="05"
+        index="04"
         label="DAYTONA SANDBOX"
         title="Deterministic compliance"
         aside={<span className="evidence-badge is-dark"><ShieldCheck size={13} /> Executed as code</span>}
