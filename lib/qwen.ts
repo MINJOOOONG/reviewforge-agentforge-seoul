@@ -259,8 +259,6 @@ const applicationMessagesSchema = z.object({
   businessHighlights: z.array(z.string().min(1).max(300)).max(6).default([]),
   variants: z.tuple([
     z.object({ label: z.string().min(1).max(100), message: z.string().min(1).max(1_000) }),
-    z.object({ label: z.string().min(1).max(100), message: z.string().min(1).max(1_000) }),
-    z.object({ label: z.string().min(1).max(100), message: z.string().min(1).max(500) }),
   ]),
 });
 
@@ -271,8 +269,8 @@ export async function generateApplicationMessages(
   naverResearch?: { query: string; content: string },
 ): Promise<{ variants: ApplicationMessageVariant[]; businessHighlights: string[]; requestId?: string; model: string }> {
   const targetLanguage = language === "ko" ? "Korean" : "English";
-  const labels = language === "ko" ? ["기본형", "콘텐츠 강조형", "간결형"] : ["Balanced", "Content-focused", "Concise"];
-  const prompt = `Using only the campaign analysis below, write three ${targetLanguage} application messages for a creator who has not yet been selected or visited.
+  const label = language === "ko" ? "맞춤 신청 문구" : "Recommended message";
+  const prompt = `Using only the campaign analysis below, write one polished ${targetLanguage} application message for a creator who has not yet been selected or visited.
 
 Non-negotiable rules:
 - The creator has not yet visited, tasted, purchased, or used the service.
@@ -287,8 +285,8 @@ Non-negotiable rules:
 - Never treat ads, rankings, ratings, subjective review claims, or unsupported popularity language as facts.
 - Use a supported business highlight as a specific reason for applying when available, but never phrase it as the applicant's first-hand experience.
 - Use future-facing language about what the creator will show if selected.
-- "Balanced" should be 2–3 natural sentences, "Content-focused" should show a clear mission plan in 2–3 sentences, and "Concise" should be 1–2 sentences.
-- Use the labels ${JSON.stringify(labels)} in that order.
+- Write 2–3 natural sentences that combine a specific reason for applying with a clear review plan.
+- Return only one message and use the label ${JSON.stringify(label)}.
 
 CAMPAIGN REQUIREMENTS JSON:
 ${JSON.stringify(requirements)}
@@ -306,9 +304,7 @@ Return only a JSON object in this shape:
 {
   "businessHighlights": [],
   "variants": [
-    { "label": ${JSON.stringify(labels[0])}, "message": "" },
-    { "label": ${JSON.stringify(labels[1])}, "message": "" },
-    { "label": ${JSON.stringify(labels[2])}, "message": "" }
+    { "label": ${JSON.stringify(label)}, "message": "" }
   ]
 }`;
 
@@ -321,7 +317,7 @@ Return only a JSON object in this shape:
       },
       { role: "user", content: prompt },
     ],
-    { json: true, maxTokens: 1_536, temperature: 0.4 },
+    { json: true, maxTokens: 768, temperature: 0.4 },
   );
 
   const generated = parseJsonFromModel(result.content, applicationMessagesSchema);

@@ -49,7 +49,7 @@ export function ApplicationResults({ result, locale }: ApplicationResultsProps) 
         </div>
 
         <div className="apply-message-grid">
-          {result.variants.slice(0, 3).map((variant, index) => (
+          {result.variants.slice(0, 1).map((variant, index) => (
             <article className="result-card application-card apply-message" key={`${variant.label}-${index}`}>
               <div className="result-heading">
                 <div>
