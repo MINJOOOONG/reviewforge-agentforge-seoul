@@ -643,10 +643,7 @@ export default function Home() {
             <div className="results-stack">
               {workMode === "apply" ? (
                 campaign && application && (
-                  <>
-                    <RequirementsCard requirements={campaign.requirements} locale={locale} />
-                    <ApplicationResults result={application} locale={locale} />
-                  </>
+                  <ApplicationResults result={application} locale={locale} />
                 )
               ) : (
                 <>

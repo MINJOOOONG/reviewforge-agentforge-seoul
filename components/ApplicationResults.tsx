@@ -48,17 +48,6 @@ export function ApplicationResults({ result, locale }: ApplicationResultsProps) 
           </span>
         </div>
 
-        {result.businessHighlights.length > 0 && (
-          <div className="business-research-note">
-            <span>NAVER PUBLIC RESEARCH · BRIGHT DATA</span>
-            <h3>{locale === "ko" ? "이곳이 특별한 이유" : "What makes this place distinctive"}</h3>
-            <ul>
-              {result.businessHighlights.map((highlight) => <li key={highlight}>{highlight}</li>)}
-            </ul>
-            {result.researchQuery && <small>{locale === "ko" ? "검색어" : "Search"} · {result.researchQuery}</small>}
-          </div>
-        )}
-
         <div className="apply-message-grid">
           {result.variants.slice(0, 3).map((variant, index) => (
             <article className="result-card application-card apply-message" key={`${variant.label}-${index}`}>
