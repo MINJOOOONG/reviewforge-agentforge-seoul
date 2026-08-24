@@ -258,7 +258,7 @@ ${campaignEvidence}`;
 const applicationMessagesSchema = z.object({
   businessHighlights: z.array(z.string().min(1).max(300)).max(6).default([]),
   variants: z.tuple([
-    z.object({ label: z.string().min(1).max(100), message: z.string().min(1).max(1_000) }),
+    z.object({ label: z.string().min(1).max(100), message: z.string().min(1).max(2_000) }),
   ]),
 });
 
@@ -270,6 +270,9 @@ export async function generateApplicationMessages(
 ): Promise<{ variants: ApplicationMessageVariant[]; businessHighlights: string[]; requestId?: string; model: string }> {
   const targetLanguage = language === "ko" ? "Korean" : "English";
   const label = language === "ko" ? "맞춤 신청 문구" : "Recommended message";
+  const lengthGuidance = language === "ko"
+    ? "Write 5–7 natural sentences totaling roughly 450–700 Korean characters."
+    : "Write 5–7 natural sentences totaling roughly 180–260 English words.";
   const prompt = `Using only the campaign analysis below, write one polished ${targetLanguage} application message for a creator who has not yet been selected or visited.
 
 Non-negotiable rules:
@@ -285,7 +288,9 @@ Non-negotiable rules:
 - Never treat ads, rankings, ratings, subjective review claims, or unsupported popularity language as facts.
 - Use a supported business highlight as a specific reason for applying when available, but never phrase it as the applicant's first-hand experience.
 - Use future-facing language about what the creator will show if selected.
-- Write 2–3 natural sentences that combine a specific reason for applying with a clear review plan.
+- ${lengthGuidance}
+- Develop the message with the applicant's relevant strengths, a campaign-specific motivation, what will be photographed or introduced, and a concrete plan for following the required keywords and review missions.
+- Keep every sentence useful and natural; do not pad the message with repetitive enthusiasm.
 - Return only one message and use the label ${JSON.stringify(label)}.
 
 CAMPAIGN REQUIREMENTS JSON:
@@ -317,7 +322,7 @@ Return only a JSON object in this shape:
       },
       { role: "user", content: prompt },
     ],
-    { json: true, maxTokens: 768, temperature: 0.4 },
+    { json: true, maxTokens: 1_536, temperature: 0.4 },
   );
 
   const generated = parseJsonFromModel(result.content, applicationMessagesSchema);

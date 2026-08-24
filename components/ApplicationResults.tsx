@@ -49,13 +49,9 @@ export function ApplicationResults({ result, locale }: ApplicationResultsProps) 
         </div>
 
         <div className="apply-message-grid">
-          {result.variants.slice(0, 1).map((variant, index) => (
-            <article className="result-card application-card apply-message" key={`${variant.label}-${index}`}>
-              <div className="result-heading">
-                <div>
-                  <span>{String(index + 1).padStart(2, "0")} / APPLICATION MESSAGE</span>
-                  <h2>{variant.label}</h2>
-                </div>
+          {result.variants.slice(0, 1).map((variant) => (
+            <article className="result-card application-card apply-message" key={variant.label}>
+              <div className="apply-message-actions">
                 <CopyButton value={variant.message} label={variant.label} locale={locale} />
               </div>
               <blockquote>{variant.message}</blockquote>

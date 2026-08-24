@@ -1182,8 +1182,8 @@ textarea:focus-visible {
 .apply-messages { background: var(--paper-strong); border: 1px solid var(--line); padding: 34px; }
 .apply-message-grid { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
 .apply-message.application-card { align-self: stretch; padding: 24px; position: static; }
-.apply-message .result-heading { min-height: 78px; }
-.apply-message blockquote { font-size: 16px; line-height: 1.7; margin-bottom: 28px; }
+.apply-message-actions { display: flex; justify-content: flex-end; }
+.apply-message blockquote { font-size: 16px; line-height: 1.85; margin: 8px 0 28px; }
 
 .copy-button {
   align-items: center;
