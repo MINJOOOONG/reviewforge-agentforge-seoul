@@ -29,7 +29,7 @@ import type { MediaAnalysisResult } from "@/types/media";
 import type { ApplicationGenerationResult } from "@/types/application";
 import type { Locale } from "@/types/locale";
 
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 const initialSteps: PipelineStepState[] = [
   { id: "campaign", status: "idle" },
   { id: "media", status: "idle" },

@@ -1,5 +1,5 @@
 export function isDemoMode() {
-  return process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
+  return process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 }
 
 export function requireEnv(name: string): string {

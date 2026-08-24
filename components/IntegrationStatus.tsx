@@ -5,7 +5,7 @@ import type { IntegrationHealth } from "@/types/integrations";
 import type { Locale } from "@/types/locale";
 
 const fallbackLabels = ["Bright Data", "Nosana", "Qwen Cloud", "Daytona"];
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
 export function IntegrationStatus({ locale }: { locale: Locale }) {
   const [items, setItems] = useState<IntegrationHealth[]>([]);
