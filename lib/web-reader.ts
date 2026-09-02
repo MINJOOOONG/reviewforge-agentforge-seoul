@@ -2,9 +2,10 @@ import { lookup } from "node:dns/promises";
 import { get as httpGet, type IncomingMessage, type RequestOptions } from "node:http";
 import { get as httpsGet } from "node:https";
 import { isIP, type LookupFunction } from "node:net";
-import { ProviderError } from "@/lib/http";
+import { fetchWithTimeout, ProviderError } from "@/lib/http";
 import { providerLog } from "@/lib/logger";
 
+const READER_ENDPOINT = "https://r.jina.ai/";
 const DIRECT_FETCH_MAX_BYTES = 2 * 1024 * 1024;
 const DIRECT_FETCH_MAX_REDIRECTS = 3;
 const DIRECT_FETCH_MAX_TEXT_CHARS = 120_000;
@@ -329,8 +330,42 @@ async function requestDirect(url: string, timeoutMs = 20_000) {
   throw new ProviderError("Web Reader", "The campaign page could not be read.", 502);
 }
 
+async function requestViaPublicReader(url: string) {
+  providerLog("WebReader", "Public reader fallback START", { hostname: new URL(url).hostname });
+  const response = await fetchWithTimeout(
+    `${READER_ENDPOINT}${url}`,
+    {
+      headers: {
+        Accept: "text/plain",
+        "X-Return-Format": "markdown",
+      },
+    },
+    25_000,
+  );
+  if (!response.ok) {
+    throw new ProviderError("Web Reader", `The public reader returned HTTP ${response.status}.`, 502);
+  }
+  const content = (await response.text()).trim().slice(0, DIRECT_FETCH_MAX_TEXT_CHARS);
+  if (!content) {
+    throw new ProviderError("Web Reader", "The public reader returned no campaign text.", 502);
+  }
+  const pageTitle = content.match(/^Title:\s*(.+)$/im)?.[1]?.trim().slice(0, 500);
+  providerLog("WebReader", "Public reader fallback SUCCESS", { hostname: new URL(url).hostname, characters: content.length });
+  return { content, pageTitle, requestId: `reader-${Date.now()}` };
+}
+
 export async function readCampaignPage(url: string) {
   const safeUrl = assertPublicHttpUrl(url);
-  const result = await requestDirect(safeUrl);
-  return { ...result, provider: "Web Reader" as const, url: safeUrl };
+  await assertPublicDestination(safeUrl, Date.now() + 5_000);
+  try {
+    const result = await requestDirect(safeUrl, 7_000);
+    return { ...result, provider: "Web Reader" as const, url: safeUrl };
+  } catch (directError) {
+    providerLog("WebReader", "Direct request unavailable; trying public reader", {
+      hostname: new URL(safeUrl).hostname,
+      reason: directError instanceof Error ? directError.message.slice(0, 180) : "Unknown direct request error",
+    });
+    const result = await requestViaPublicReader(safeUrl);
+    return { ...result, provider: "Web Reader" as const, url: safeUrl };
+  }
 }
