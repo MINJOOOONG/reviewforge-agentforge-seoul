@@ -77,8 +77,8 @@ export type CampaignAnalysisResult = {
   requirements: CampaignRequirements;
   campaignEvidence?: string;
   source: {
-    provider: "Bright Data";
-    mode: "real" | "demo";
+    provider: "Web Reader" | "Demo Fixture";
+    mode: "real" | "demo" | "local";
     fetchedAt: string;
     pageTitle?: string;
     requestId?: string;

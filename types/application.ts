@@ -9,8 +9,8 @@ export type ApplicationGenerationResult = {
   researchSources: string[];
   researchQuery?: string;
   source: {
-    provider: "Qwen Cloud";
-    mode: "real" | "demo";
+    provider: "Local Engine";
+    mode: "real" | "demo" | "local";
     model: string;
     generatedAt: string;
     requestId?: string;

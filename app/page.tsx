@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApplicationResults } from "@/components/ApplicationResults";
-import { IntegrationStatus } from "@/components/IntegrationStatus";
 import { MediaUploader, type UploadedMedia } from "@/components/MediaUploader";
 import { PipelineProgress, type PipelineStepId, type PipelineStepState } from "@/components/PipelineProgress";
 import {
@@ -315,6 +314,16 @@ export default function Home() {
     document.documentElement.lang = locale;
   }, [locale]);
   useEffect(() => () => uploadsRef.current.forEach((item) => URL.revokeObjectURL(item.preview)), []);
+  useEffect(() => {
+    if (running || !hasRun) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      window.history.replaceState(null, "", "#results");
+      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [running, hasRun, application, generation, errors.length]);
 
   const updateStep = useCallback((id: PipelineStepId, status: PipelineStepState["status"], error?: string) => {
     setSteps((current) => current.map((step) => (step.id === id ? { ...step, status, error } : step)));
@@ -444,15 +453,17 @@ export default function Home() {
       updateStep("campaign", "success");
     } catch (error) {
       const failure = error as Error & { provider?: string };
-      upstreamFailures.push(failure.provider || "Bright Data");
-      setErrors((current) => [...current, { provider: failure.provider || "Bright Data", message: failure.message }]);
+      upstreamFailures.push(failure.provider || "Web Reader");
+      setErrors((current) => [...current, { provider: failure.provider || "Web Reader", message: failure.message }]);
       updateStep("campaign", "error", failure.message);
     }
 
     if (workMode === "apply") {
       if (!campaignSucceeded) {
-        const message = "The application message was not generated because the campaign source could not be verified.";
-        setErrors((current) => [...current, { provider: "Qwen Cloud", message }]);
+        const message = locale === "ko"
+          ? "공개 공고 링크를 읽지 못해 신청 문구를 만들지 않았습니다. URL을 다시 확인해 주세요."
+          : "The public campaign page could not be read. Check the URL and try again.";
+        setErrors((current) => [...current, { provider: "Application Writer", message }]);
         updateStep("generate", "error", message);
       } else {
         updateStep("generate", "running");
@@ -468,24 +479,22 @@ export default function Home() {
           updateStep("generate", "success");
         } catch (error) {
           const failure = error as Error & { provider?: string };
-          setErrors((current) => [...current, { provider: failure.provider || "Qwen Cloud", message: failure.message }]);
+          setErrors((current) => [...current, { provider: failure.provider || "Application Writer", message: failure.message }]);
           updateStep("generate", "error", failure.message);
         }
       }
       setRunning(false);
-      window.setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
       return;
     }
 
     if (!campaignSucceeded) {
       const message = locale === "ko"
-        ? "공고 링크를 확인하지 못해 후기를 생성하지 않았습니다. URL과 Bright Data 연결을 확인해 주세요."
+        ? "공개 공고 링크를 읽지 못해 후기를 생성하지 않았습니다. URL이 올바르고 외부에서 열리는지 확인해 주세요."
         : "The review was not generated because the campaign URL could not be verified.";
       updateStep("media", "error", message);
       updateStep("generate", "error", message);
       updateStep("compliance", "error", message);
       setRunning(false);
-      window.setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
       return;
     }
 
@@ -502,8 +511,8 @@ export default function Home() {
       updateStep("media", "success");
     } catch (error) {
       const failure = error as Error & { provider?: string };
-      upstreamFailures.push(failure.provider || "Nosana");
-      setErrors((current) => [...current, { provider: failure.provider || "Nosana", message: failure.message }]);
+      upstreamFailures.push(failure.provider || "Media Reader");
+      setErrors((current) => [...current, { provider: failure.provider || "Media Reader", message: failure.message }]);
       updateStep("media", "error", failure.message);
     }
 
@@ -521,8 +530,8 @@ export default function Home() {
       updateStep("generate", "success");
     } catch (error) {
       const failure = error as Error & { provider?: string };
-      upstreamFailures.push(failure.provider || "Qwen Cloud");
-      setErrors((current) => [...current, { provider: failure.provider || "Qwen Cloud", message: failure.message }]);
+      upstreamFailures.push(failure.provider || "Review Writer");
+      setErrors((current) => [...current, { provider: failure.provider || "Review Writer", message: failure.message }]);
       updateStep("generate", "error", failure.message);
     }
 
@@ -548,11 +557,10 @@ export default function Home() {
       updateStep("compliance", "success");
     } catch (error) {
       const failure = error as Error & { provider?: string };
-      setErrors((current) => [...current, { provider: failure.provider || "Daytona", message: failure.message }]);
+      setErrors((current) => [...current, { provider: failure.provider || "Rule Checker", message: failure.message }]);
       updateStep("compliance", "error", failure.message);
     }
     setRunning(false);
-    window.setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
   };
 
   const visibleStepIds = useMemo(
@@ -579,7 +587,7 @@ export default function Home() {
             <button type="button" className={!ko ? "is-active" : ""} onClick={() => setLocale("en")}>EN</button>
           </div>
           <div className={`mode-pill ${DEMO_MODE ? "is-demo" : "is-real"}`}>
-            <i /> {DEMO_MODE ? "DEMO MODE" : "REAL MODE"}
+            <i /> {DEMO_MODE ? "DEMO MODE" : "LIVE URL"}
           </div>
         </div>
       </header>
@@ -663,7 +671,7 @@ export default function Home() {
           {workMode === "review" && <>
           <div className="form-column form-media">
             <label><span>02</span> {ko ? "사진 업로드" : "Media Upload"} <small>{uploads.length.toString().padStart(2, "0")} / {MAX_MEDIA_UPLOADS}</small></label>
-            <p>{ko ? "직접 방문해 촬영한 사진을 올리면 GPU가 장면과 품질을 분석합니다" : "Upload photos from your visit for GPU scene and quality analysis"}</p>
+            <p>{ko ? "직접 방문해 촬영한 사진을 올리면 글의 흐름에 맞게 정리합니다" : "Upload photos from your visit and arrange them for the story"}</p>
             <MediaUploader items={uploads} onAdd={addFiles} onRemove={removeFile} disabled={running || processingUploads} locale={locale} />
           </div>
 
@@ -740,7 +748,7 @@ export default function Home() {
 
           <button type="button" className="generate-button" onClick={handleGenerate} disabled={running || processingUploads}>
             <span className="generate-icon">{running || processingUploads ? <LoaderCircle className="spin" size={22} /> : <Sparkles size={22} />}</span>
-            <span><strong>{processingUploads ? (ko ? "사진 최적화 중…" : "Optimizing evidence…") : running ? (ko ? "에이전트 작업 중…" : "Agents are forging…") : workMode === "apply" ? (ko ? "신청 문구 만들기" : "Create Application Messages") : (ko ? "후기 만들기" : "Create My Review")}</strong><small>{processingUploads ? (ko ? "이미지 준비 중" : "Preparing images") : running ? `${completedCount} / ${totalSteps} ${ko ? "에이전트 완료" : "agents complete"}` : workMode === "apply" ? "Bright Data → Qwen Cloud" : (ko ? "4개 에이전트 · 검증된 초안 1개" : "4 agents · 1 verified draft")}</small></span>
+            <span><strong>{processingUploads ? (ko ? "사진 최적화 중…" : "Optimizing evidence…") : running ? (ko ? "에이전트 작업 중…" : "Agents are forging…") : workMode === "apply" ? (ko ? "신청 문구 만들기" : "Create Application Messages") : (ko ? "후기 만들기" : "Create My Review")}</strong><small>{processingUploads ? (ko ? "이미지 준비 중" : "Preparing images") : running ? `${completedCount} / ${totalSteps} ${ko ? "단계 완료" : "steps complete"}` : workMode === "apply" ? (ko ? "공고 읽기 → 맞춤 문구" : "Read brief → Custom message") : (ko ? "공고 분석 · 사진 배치 · 조건 확인" : "Analyze brief · Place photos · Check rules")}</small></span>
             <ArrowRight size={23} />
           </button>
         </div>
@@ -781,7 +789,7 @@ export default function Home() {
               ) : (
                 <>
                   <ExecutionReceipt campaign={campaign} media={media} generation={generation} compliance={compliance} locale={locale} />
-                  {campaign && <RequirementsCard requirements={campaign.requirements} locale={locale} />}
+                  {campaign && <RequirementsCard requirements={campaign.requirements} sourceProvider={campaign.source.provider} locale={locale} />}
                   {generation && campaign && (
                     <GeneratedContent
                       generation={generation}
@@ -803,17 +811,22 @@ export default function Home() {
 
       <section className="proof-strip">
         {workMode === "apply" ? (
-          <div><span>APPLY PIPELINE</span><strong>Bright Data</strong><ArrowRight size={14} /><strong>Qwen Cloud</strong></div>
+          <div><span>APPLY PIPELINE</span><strong>Web Reader</strong><ArrowRight size={14} /><strong>Application Writer</strong></div>
         ) : (
-          <div><span>REVIEW PIPELINE</span><strong>Bright Data</strong><ArrowRight size={14} /><strong>Nosana</strong><ArrowRight size={14} /><strong>Qwen Cloud</strong><ArrowRight size={14} /><strong>Daytona</strong></div>
+          <div><span>REVIEW PIPELINE</span><strong>Web Reader</strong><ArrowRight size={14} /><strong>Photo Organizer</strong><ArrowRight size={14} /><strong>Review Writer</strong><ArrowRight size={14} /><strong>Rule Checker</strong></div>
         )}
-        <p><CheckCircle2 size={14} /> {DEMO_MODE ? (ko ? "데모 데이터 · Real Mode는 실제 Provider 호출" : "Demo fixtures · Real Mode keeps live provider calls") : (ko ? "실제 백엔드 실행 단계" : "Live backend execution stages")}</p>
+        <p><CheckCircle2 size={14} /> {DEMO_MODE ? (ko ? "데모 데이터로 전체 흐름을 확인합니다" : "Demo data shows the full flow") : (ko ? "API 키 없이 입력한 공개 링크를 읽습니다" : "Reads the submitted public URL without API keys")}</p>
       </section>
 
       <footer>
         <div><Flame size={15} fill="currentColor" /> REVIEWFORGE</div>
         <p>{ko ? "실제 경험으로 생성하고, 코드로 검증합니다." : "Grounded creation. Deterministic verification."}</p>
-        <IntegrationStatus locale={locale} />
+        <div className="integration-status">
+          <span className="integration-label">{ko ? "실행 방식" : "ENGINE"}</span>
+          <div className="integration-list">
+            <span className="integration-item"><i className="status-dot status-connected" />{ko ? "내장 엔진" : "Built-in"}<small>{ko ? "준비됨" : "Ready"}</small></span>
+          </div>
+        </div>
       </footer>
     </main>
   );

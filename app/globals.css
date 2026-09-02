@@ -998,6 +998,7 @@ textarea:focus-visible {
 .receipt-item > i { background: #888; border-radius: 50%; height: 7px; width: 7px; }
 .receipt-item > i.is-real { background: #4e8b32; box-shadow: 0 0 0 4px rgba(78, 139, 50, .1); }
 .receipt-item > i.is-demo { background: #e88b3d; box-shadow: 0 0 0 4px rgba(232, 139, 61, .1); }
+.receipt-item > i.is-local { background: #77776f; box-shadow: 0 0 0 4px rgba(119, 119, 111, .1); }
 .receipt-item strong, .receipt-item span { display: block; }
 .receipt-item strong { font-size: 10px; }
 .receipt-item span { color: #85867e; font-size: 7px; margin-top: 3px; text-transform: uppercase; }
@@ -1443,6 +1444,7 @@ footer > p { color: #71726b; font-size: 9px; letter-spacing: .06em; }
 .integration-item small { color: #6d6e68; font-size: 7px; }
 .status-dot { background: #666; border-radius: 50%; height: 6px; width: 6px; }
 .status-demo { background: #ffb255; }
+.status-optional { background: #77776f; }
 .status-configured, .status-connected { background: var(--acid); }
 .status-missing, .status-unavailable { background: #ff7253; }
 

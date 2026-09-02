@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { fetchCampaign } from "@/lib/brightdata";
+import { readCampaignPage } from "@/lib/web-reader";
 import { DEMO_REQUIREMENTS, DEMO_REQUIREMENTS_KO, demoPause } from "@/lib/demo";
 import { isDemoMode } from "@/lib/env";
 import { apiError, ProviderError } from "@/lib/http";
+import { extractCampaignRequirementsLocally } from "@/lib/local-engine";
 import { providerLog } from "@/lib/logger";
-import { extractCampaignRequirements } from "@/lib/qwen";
 import { assertRateLimit } from "@/lib/rate-limit";
 import type { CampaignAnalysisResult } from "@/types/campaign";
 
@@ -16,16 +16,16 @@ export async function POST(request: Request) {
     if (!isDemoMode()) assertRateLimit(request, "campaign", { limit: 6 });
     const body = (await request.json()) as { url?: string; language?: unknown };
     const url = body.url?.trim();
-    if (!url) throw new ProviderError("Bright Data", "Enter a campaign URL.", 400);
+    if (!url) throw new ProviderError("Web Reader", "Enter a campaign URL.", 400);
 
     if (isDemoMode()) {
       const demoRequirements = body.language === "ko" ? DEMO_REQUIREMENTS_KO : DEMO_REQUIREMENTS;
-      providerLog("BrightData", "Demo fixture loaded");
+      providerLog("LocalEngine", "Demo campaign fixture loaded");
       await demoPause(480);
       return NextResponse.json<CampaignAnalysisResult>({
         requirements: { ...demoRequirements, sourceUrl: url },
         source: {
-          provider: "Bright Data",
+          provider: "Demo Fixture",
           mode: "demo",
           fetchedAt: new Date().toISOString(),
           pageTitle: demoRequirements.campaignName,
@@ -34,19 +34,18 @@ export async function POST(request: Request) {
       });
     }
 
-    const page = await fetchCampaign(url);
-    const extracted = await extractCampaignRequirements(page.content, page.url, {
-      language: body.language === "ko" ? "ko" : "en",
-    });
+    const page = await readCampaignPage(url);
+    const language = body.language === "ko" ? "ko" : "en";
+    const extracted = extractCampaignRequirementsLocally(page.content, page.url, language);
     return NextResponse.json<CampaignAnalysisResult>({
       requirements: extracted.requirements,
       campaignEvidence: extracted.evidence,
       source: {
-        provider: "Bright Data",
+        provider: page.provider,
         mode: "real",
         fetchedAt: new Date().toISOString(),
         pageTitle: page.pageTitle,
-        requestId: page.requestId || extracted.requestId,
+        requestId: page.requestId,
       },
     });
   } catch (error) {

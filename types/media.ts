@@ -26,8 +26,8 @@ export type MediaAnalysis = {
 export type MediaAnalysisResult = {
   items: MediaAnalysis[];
   source: {
-    provider: "Nosana";
-    mode: "real" | "demo";
+    provider: "Local Engine";
+    mode: "real" | "demo" | "local";
     workloadId?: string;
     model?: string;
     analyzedAt: string;

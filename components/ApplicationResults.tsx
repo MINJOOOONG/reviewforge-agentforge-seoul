@@ -40,11 +40,11 @@ export function ApplicationResults({ result, locale }: ApplicationResultsProps) 
       <section className="apply-messages" aria-labelledby="application-messages-title">
         <div className="result-heading">
           <div>
-            <span>02 / QWEN CLOUD</span>
+            <span>02 / {result.source.provider.toUpperCase()}</span>
             <h2 id="application-messages-title">{locale === "ko" ? "신청 한마디" : "Application message"}</h2>
           </div>
           <span className="evidence-badge is-purple">
-            <Sparkles size={13} /> {result.source.mode === "real" ? (locale === "ko" ? "실시간 생성" : "Live generated") : (locale === "ko" ? "데모 생성" : "Demo generated")}
+            <Sparkles size={13} /> {result.source.mode === "real" ? (locale === "ko" ? "실시간 생성" : "Live generated") : result.source.mode === "local" ? (locale === "ko" ? "기본 엔진 생성" : "Built-in engine") : (locale === "ko" ? "데모 생성" : "Demo generated")}
           </span>
         </div>
 
@@ -56,7 +56,9 @@ export function ApplicationResults({ result, locale }: ApplicationResultsProps) 
               </div>
               <blockquote>{variant.message}</blockquote>
               <div className="generated-source">
-                <Sparkles size={14} /> {locale === "ko" ? "공고 + 공개 검색 기반 · 방문 전 표현" : "Brief + public research · Pre-visit language"}
+                <Sparkles size={14} /> {result.source.mode === "local"
+                  ? (locale === "ko" ? "공고 링크 + 입력한 특성 기반 · 방문 전 표현" : "Campaign link + your highlights · Pre-visit language")
+                  : (locale === "ko" ? "공고 + 공개 검색 기반 · 방문 전 표현" : "Brief + public research · Pre-visit language")}
               </div>
             </article>
           ))}

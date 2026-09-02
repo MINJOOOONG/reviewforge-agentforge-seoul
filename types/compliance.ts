@@ -15,8 +15,8 @@ export type ComplianceResult = {
     fail: number;
   };
   source: {
-    provider: "Daytona";
-    mode: "real" | "demo";
+    provider: "Local Engine";
+    mode: "real" | "demo" | "local";
     sandboxId?: string;
     executedAt: string;
     durationMs?: number;

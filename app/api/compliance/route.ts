@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyCompliance, type DaytonaComplianceInput } from "@/lib/daytona";
-import { demoPause, runDeterministicCompliance } from "@/lib/demo";
+import { demoPause, runDeterministicCompliance, type ComplianceInput } from "@/lib/demo";
 import { isDemoMode } from "@/lib/env";
 import { apiError, ProviderError } from "@/lib/http";
 import { providerLog } from "@/lib/logger";
@@ -14,11 +13,11 @@ export const maxDuration = 180;
 export async function POST(request: Request) {
   try {
     if (!isDemoMode()) assertRateLimit(request, "compliance", { limit: 6 });
-    const raw = (await request.json()) as Partial<DaytonaComplianceInput>;
+    const raw = (await request.json()) as Partial<ComplianceInput>;
     if (!raw.requirements || typeof raw.draft !== "string") {
-      throw new ProviderError("Daytona", "Draft or campaign requirements are missing", 400);
+      throw new ProviderError("Rule Checker", "Draft or campaign requirements are missing", 400);
     }
-    const input: DaytonaComplianceInput = {
+    const input: ComplianceInput = {
       requirements: campaignRequirementsSchema.parse(raw.requirements),
       title: typeof raw.title === "string" ? raw.title : "",
       draft: raw.draft,
@@ -29,21 +28,28 @@ export async function POST(request: Request) {
     };
 
     if (isDemoMode()) {
-      providerLog("Daytona", "Demo deterministic verifier executed", { checks: true });
+      providerLog("LocalEngine", "Demo deterministic verifier executed", { checks: true });
       await demoPause(540);
       const result = runDeterministicCompliance(input);
       return NextResponse.json<ComplianceResult>({
         ...result,
         source: {
-          provider: "Daytona",
+          provider: "Local Engine",
           mode: "demo",
-          sandboxId: "demo-daytona-sandbox",
           executedAt: new Date().toISOString(),
           durationMs: 842,
         },
       });
     }
-    return NextResponse.json(await verifyCompliance(input));
+    const result = runDeterministicCompliance(input);
+    return NextResponse.json<ComplianceResult>({
+      ...result,
+      source: {
+        provider: "Local Engine",
+        mode: "local",
+        executedAt: new Date().toISOString(),
+      },
+    });
   } catch (error) {
     return apiError(error);
   }

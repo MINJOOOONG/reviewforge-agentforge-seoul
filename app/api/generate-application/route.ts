@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { fetchNaverBusinessResearch } from "@/lib/brightdata";
 import { demoPause } from "@/lib/demo";
 import { isDemoMode } from "@/lib/env";
 import { apiError, ProviderError } from "@/lib/http";
+import { generateApplicationMessagesLocally } from "@/lib/local-engine";
 import { providerLog } from "@/lib/logger";
-import { generateApplicationMessages } from "@/lib/qwen";
 import { assertRateLimit } from "@/lib/rate-limit";
 import { campaignRequirementsSchema } from "@/lib/schemas";
 import type { ApplicationGenerationResult, ApplicationMessageVariant } from "@/types/application";
@@ -49,14 +48,14 @@ export async function POST(request: Request) {
       language?: unknown;
     };
     if (!raw.requirements) {
-      throw new ProviderError("Qwen Cloud", "Campaign requirements are missing", 400);
+      throw new ProviderError("Application Writer", "Campaign requirements are missing", 400);
     }
 
     const requirements = campaignRequirementsSchema.parse(raw.requirements);
     const language: Locale = raw.language === "ko" ? "ko" : "en";
     const campaignEvidence = typeof raw.campaignEvidence === "string" ? raw.campaignEvidence.trim() : "";
     if (campaignEvidence.length > 32_000) {
-      throw new ProviderError("Qwen Cloud", "Campaign evidence is too large.", 400);
+      throw new ProviderError("Application Writer", "Campaign evidence is too large.", 400);
     }
     const applicantKeywords = typeof raw.applicantKeywords === "string"
       ? raw.applicantKeywords
@@ -70,7 +69,7 @@ export async function POST(request: Request) {
       const businessHighlights = language === "ko"
         ? ["제철 식재료를 활용한 시그니처 런치", "차분한 공간과 정갈한 플레이팅"]
         : ["A seasonal signature lunch", "A calm concept with careful plating"];
-      providerLog("Qwen", "Demo pre-visit application message loaded", { variants: 1 });
+      providerLog("LocalEngine", "Demo pre-visit application message loaded", { variants: 1 });
       await demoPause(620);
       return NextResponse.json<ApplicationGenerationResult>({
         variants: demoApplicationVariants(requirements, applicantKeywords, language),
@@ -78,45 +77,31 @@ export async function POST(request: Request) {
         researchSources: ["https://search.naver.com/search.naver?where=nexearch&query=%ED%95%98%EB%A3%A8%EC%8B%9D%ED%83%81%20%EC%84%B1%EC%88%98"],
         researchQuery: language === "ko" ? "하루식탁 성수" : "Haru Table Seongsu",
         source: {
-          provider: "Qwen Cloud",
+          provider: "Local Engine",
           mode: "demo",
-          model: "qwen3.5-flash",
+          model: "campaign-template-v1",
           generatedAt: new Date().toISOString(),
-          requestId: "demo-qwen-application-01",
+          requestId: "demo-application-01",
         },
       });
     }
 
-    if (!campaignEvidence) {
-      throw new ProviderError("Qwen Cloud", "Verified campaign page evidence is missing.", 400);
-    }
+    const localResult = () => {
+      const generated = generateApplicationMessagesLocally(requirements, applicantKeywords, language);
+      return NextResponse.json<ApplicationGenerationResult>({
+        variants: generated.variants,
+        businessHighlights: generated.businessHighlights,
+        researchSources: [],
+        source: {
+          provider: "Local Engine",
+          mode: "local",
+          model: "campaign-template-v1",
+          generatedAt: new Date().toISOString(),
+        },
+      });
+    };
 
-    const research = await fetchNaverBusinessResearch({
-      brand: requirements.brand,
-      campaignName: requirements.campaignName,
-      requiredKeywords: requirements.requiredKeywords,
-      providedItems: requirements.providedItems,
-    });
-    const generated = await generateApplicationMessages(
-      requirements,
-      applicantKeywords,
-      language,
-      research.content ? { query: research.query, content: research.content } : undefined,
-      campaignEvidence,
-    );
-    return NextResponse.json<ApplicationGenerationResult>({
-      variants: generated.variants,
-      businessHighlights: generated.businessHighlights,
-      researchSources: research.content && generated.businessHighlights.length ? research.sourceUrls : [],
-      researchQuery: research.content && generated.businessHighlights.length ? research.query : undefined,
-      source: {
-        provider: "Qwen Cloud",
-        mode: "real",
-        model: generated.model,
-        generatedAt: new Date().toISOString(),
-        requestId: generated.requestId,
-      },
-    });
+    return localResult();
   } catch (error) {
     return apiError(error);
   }

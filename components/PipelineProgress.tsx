@@ -15,30 +15,30 @@ export type PipelineStepState = {
 const definitions = [
   {
     id: "campaign" as const,
-    provider: "BRIGHT DATA",
+    provider: "WEB READER",
     title: "Read campaign",
     description: "Extract missions and rules from the public brief",
     Icon: DatabaseZap,
   },
   {
     id: "media" as const,
-    provider: "NOSANA",
-    title: "See every frame",
-    description: "Classify scenes and photo quality on GPU",
+    provider: "PHOTO ORGANIZER",
+    title: "Order the photos",
+    description: "Arrange uploaded photos for the story",
     Icon: ScanSearch,
   },
   {
     id: "generate" as const,
-    provider: "QWEN CLOUD",
+    provider: "REVIEW WRITER",
     title: "Write with evidence",
     description: "Create a review grounded in photos and notes",
     Icon: Sparkles,
   },
   {
     id: "compliance" as const,
-    provider: "DAYTONA",
-    title: "Verify in code",
-    description: "Verify every requirement with sandboxed code",
+    provider: "RULE CHECKER",
+    title: "Check the rules",
+    description: "Check the draft against campaign requirements",
     Icon: TerminalSquare,
   },
 ];
@@ -46,16 +46,16 @@ const definitions = [
 const applyDefinitions = [
   {
     id: "campaign" as const,
-    provider: "BRIGHT DATA",
+    provider: "WEB READER",
     title: "Read campaign",
     description: "Extract the offer and selection criteria",
     Icon: DatabaseZap,
   },
   {
     id: "generate" as const,
-    provider: "QWEN CLOUD",
+    provider: "APPLICATION WRITER",
     title: "Write to apply",
-    description: "Create three honest pre-visit application messages",
+    description: "Create one honest pre-visit application message",
     Icon: Sparkles,
   },
 ];
@@ -70,13 +70,13 @@ function StatusIcon({ status }: { status: PipelineStepStatus }) {
 export function PipelineProgress({ steps, mode = "review", locale }: { steps: PipelineStepState[]; mode?: "apply" | "review"; locale: Locale }) {
   const visibleDefinitions = mode === "apply" ? applyDefinitions : definitions;
   const koreanDescriptions: Record<PipelineStepId, string> = mode === "apply"
-    ? { campaign: "공개 공고에서 제공 내역과 모집 조건 추출", generate: "방문 전 사실만 사용한 신청 문구 3종 생성", media: "", compliance: "" }
-    : { campaign: "공개 페이지에서 미션과 조건 추출", media: "GPU에서 사진 품질과 장면 분류", generate: "사진과 메모에 근거한 후기 생성", compliance: "샌드박스 코드로 조건 결정론적 검수" };
+    ? { campaign: "공개 공고에서 제공 내역과 모집 조건 추출", generate: "방문 전 사실만 사용한 맞춤 신청 문구 생성", media: "", compliance: "" }
+    : { campaign: "공개 페이지에서 미션과 조건 추출", media: "업로드 사진을 글의 흐름에 맞게 정리", generate: "사진과 메모에 근거한 후기 생성", compliance: "캠페인 조건과 생성 결과를 비교" };
   const koreanTitles: Record<PipelineStepId, string> = {
     campaign: "캠페인 읽기",
     media: "사진 분석하기",
     generate: mode === "apply" ? "신청 문구 쓰기" : "근거로 후기 쓰기",
-    compliance: "코드로 검증하기",
+    compliance: "조건 확인하기",
   };
   return (
     <section className="pipeline" aria-label={locale === "ko" ? "에이전트 파이프라인 진행 상태" : "Agent pipeline progress"}>

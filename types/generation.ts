@@ -11,8 +11,8 @@ export type GenerationResult = {
   photoOrder: PhotoOrderItem[];
   unverifiedClaims: string[];
   source: {
-    provider: "Qwen Cloud";
-    mode: "real" | "demo";
+    provider: "Local Engine";
+    mode: "real" | "demo" | "local";
     model: string;
     generatedAt: string;
     requestId?: string;

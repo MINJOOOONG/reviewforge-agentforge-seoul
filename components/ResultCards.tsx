@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   Clipboard,
   ClipboardCheck,
-  ExternalLink,
   ImageIcon,
   MessageCircleMore,
   ShieldCheck,
@@ -101,53 +100,46 @@ export function ExecutionReceipt({
 }) {
   const receipts = [
     campaign && {
-      provider: "Bright Data",
-      action: "Web Unlocker",
+      provider: campaign.source.provider,
+      action: "Public page reader",
       mode: campaign.source.mode,
       detail: campaign.source.requestId ? `Request ${campaign.source.requestId.slice(0, 18)}` : "Campaign source captured",
     },
     media && {
-      provider: "Nosana",
-      action: "CUDA · CLIP",
+      provider: media.source.provider,
+      action: "Photo ordering",
       mode: media.source.mode,
       detail: media.source.workloadId ? `Job ${media.source.workloadId.slice(0, 18)}` : media.source.model || "Media classified",
-      href:
-        media.source.mode === "real" && media.source.workloadId
-          ? `https://explore.nosana.com/jobs/${media.source.workloadId}`
-          : undefined,
     },
     generation && {
-      provider: "Qwen Cloud",
+      provider: generation.source.provider,
       action: generation.source.model,
       mode: generation.source.mode,
       detail: generation.source.requestId ? `Request ${generation.source.requestId.slice(0, 18)}` : "Grounded draft generated",
     },
     compliance && {
-      provider: "Daytona",
-      action: "TypeScript sandbox",
+      provider: compliance.source.provider,
+      action: "Deterministic checks",
       mode: compliance.source.mode,
       detail: compliance.source.sandboxId ? `Sandbox ${compliance.source.sandboxId.slice(0, 18)}` : "Verifier executed",
     },
   ].filter(Boolean) as Array<{
     provider: string;
     action: string;
-    mode: "real" | "demo";
+    mode: "real" | "demo" | "local";
     detail: string;
-    href?: string;
   }>;
 
   if (!receipts.length) return null;
   return (
-    <section className="execution-receipt" aria-label={locale === "ko" ? "Provider 실행 증빙" : "Provider execution receipt"}>
-      <div className="receipt-heading"><span>{locale === "ko" ? "실행 증빙" : "EXECUTION RECEIPT"}</span><small>{locale === "ko" ? "ID는 일부만 표시 · Secret은 서버 밖으로 전송되지 않음" : "IDs are truncated · secrets never leave the server"}</small></div>
+    <section className="execution-receipt" aria-label={locale === "ko" ? "처리 단계" : "Processing steps"}>
+      <div className="receipt-heading"><span>{locale === "ko" ? "처리 단계" : "PROCESSING STEPS"}</span><small>{locale === "ko" ? "입력 데이터는 결과 생성 후 저장하지 않음" : "Inputs are not stored after generation"}</small></div>
       <div className="receipt-grid">
-        {receipts.map((receipt) => (
-          <div className="receipt-item" key={receipt.provider}>
-            <i className={receipt.mode === "real" ? "is-real" : "is-demo"} />
+        {receipts.map((receipt, index) => (
+          <div className="receipt-item" key={`${receipt.provider}-${receipt.action}-${index}`}>
+            <i className={receipt.mode === "real" ? "is-real" : receipt.mode === "local" ? "is-local" : "is-demo"} />
             <div><strong>{receipt.provider}</strong><span>{receipt.action}</span></div>
-            {receipt.href ? (
-              <a href={receipt.href} target="_blank" rel="noreferrer">{receipt.detail}<ExternalLink size={11} /></a>
-            ) : <small>{receipt.detail}</small>}
+            <small>{receipt.detail}</small>
           </div>
         ))}
       </div>
@@ -155,7 +147,15 @@ export function ExecutionReceipt({
   );
 }
 
-export function RequirementsCard({ requirements, locale }: { requirements: CampaignRequirements; locale: Locale }) {
+export function RequirementsCard({
+  requirements,
+  sourceProvider,
+  locale,
+}: {
+  requirements: CampaignRequirements;
+  sourceProvider: CampaignAnalysisResult["source"]["provider"];
+  locale: Locale;
+}) {
   const ko = locale === "ko";
   const review = requirements.reviewRequirements;
   const keywordRules = requirements.keywordRules;
@@ -200,7 +200,7 @@ export function RequirementsCard({ requirements, locale }: { requirements: Campa
     <section className="result-card requirements-card requirements-note-card">
       <ResultHeading
         index="01"
-        label="BRIGHT DATA + QWEN"
+        label={sourceProvider === "Demo Fixture" ? "DEMO FIXTURE" : "WEB READER + LOCAL ENGINE"}
         title={ko ? "캠페인 요구사항" : "Campaign requirements"}
         aside={<span className="evidence-badge"><Check size={13} /> {ko ? "공개 공고 수집 완료" : "Public source captured"}</span>}
       />
@@ -239,9 +239,9 @@ export function MediaAndOrder({
     <section className="result-card media-card">
       <ResultHeading
         index="02"
-        label="NOSANA GPU + QWEN"
+        label="PHOTO ORGANIZER + LOCAL WRITER"
         title={locale === "ko" ? "미디어 분석" : "Media intelligence"}
-        aside={<span className="evidence-badge is-purple"><Sparkles size={13} /> {locale === "ko" ? "GPU 분류 완료" : "GPU-classified"}</span>}
+        aside={<span className="evidence-badge is-purple"><Sparkles size={13} /> {locale === "ko" ? "사진 정리 완료" : "Photos ordered"}</span>}
       />
       <div className="media-strip">
         {media.map((item, index) => (
@@ -401,14 +401,14 @@ export function GeneratedContent({
   return (
     <section className="generated-layout">
       <article className="result-card draft-card">
-        <ResultHeading index="02" label="QWEN CLOUD" title={locale === "ko" ? "블로그 초안" : "Blog draft"} aside={<CopyButton value={`${generation.title}\n\n${generation.blogDraft}`} locale={locale} />} />
+        <ResultHeading index="02" label={generation.source.provider.toUpperCase()} title={locale === "ko" ? "블로그 초안" : "Blog draft"} aside={<CopyButton value={`${generation.title}\n\n${generation.blogDraft}`} locale={locale} />} />
         <div className="draft-title-block">
           <span>{locale === "ko" ? "생성된 제목" : "GENERATED TITLE"}</span>
           <h3>{generation.title}</h3>
         </div>
         <div className={`draft-verification ${allRequirementsPassed ? "is-pass" : "is-warning"}`}>
           <div className="draft-verification-heading">
-            <span>{compliance ? "DAYTONA · CODE VERIFIED" : (ko ? "작성 기준 확인" : "REQUIREMENT CHECK")}</span>
+            <span>{compliance ? (ko ? "LOCAL ENGINE · 작성 기준 확인" : "LOCAL ENGINE · REQUIREMENTS CHECKED") : (ko ? "작성 기준 확인" : "REQUIREMENT CHECK")}</span>
             <strong>{allRequirementsPassed ? (ko ? "공고 기준을 충족했어요" : "Campaign requirements met") : (ko ? "보완이 필요한 항목이 있어요" : "Some requirements need attention")}</strong>
             {compliance && <small>{ko ? `준비도 ${compliance.score} / 100 · 실패 ${compliance.summary.fail}개` : `Readiness ${compliance.score} / 100 · ${compliance.summary.fail} failed`}</small>}
           </div>
@@ -475,9 +475,9 @@ export function ComplianceCard({ result, locale }: { result: ComplianceResult; l
     <section className="result-card compliance-card">
       <ResultHeading
         index="04"
-        label="DAYTONA SANDBOX"
+        label="LOCAL RULE CHECKER"
         title={locale === "ko" ? "미션 검수" : "Deterministic compliance"}
-        aside={<span className="evidence-badge is-dark"><ShieldCheck size={13} /> {locale === "ko" ? "코드로 실행" : "Executed as code"}</span>}
+        aside={<span className="evidence-badge is-dark"><ShieldCheck size={13} /> {locale === "ko" ? "조건 확인 완료" : "Requirements checked"}</span>}
       />
       <div className="compliance-layout">
         <div className="score-panel">
