@@ -20,7 +20,7 @@ export async function POST(request: Request) {
 
     if (isDemoMode()) {
       const demoRequirements = body.language === "ko" ? DEMO_REQUIREMENTS_KO : DEMO_REQUIREMENTS;
-      providerLog("BrightData", "Demo fixture loaded", { url });
+      providerLog("BrightData", "Demo fixture loaded");
       await demoPause(480);
       return NextResponse.json<CampaignAnalysisResult>({
         requirements: { ...demoRequirements, sourceUrl: url },

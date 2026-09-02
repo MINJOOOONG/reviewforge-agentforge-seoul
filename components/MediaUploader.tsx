@@ -1,7 +1,7 @@
 "use client";
 
 import { ImagePlus, UploadCloud, X } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Locale } from "@/types/locale";
 import { MAX_MEDIA_UPLOADS } from "@/types/media";
 
@@ -34,6 +34,31 @@ export function MediaUploader({ items, onAdd, onRemove, disabled, locale }: Prop
     [onAdd],
   );
 
+  useEffect(() => {
+    const handlePaste = (event: ClipboardEvent) => {
+      if (disabled) return;
+
+      const pastedImages = Array.from(event.clipboardData?.items ?? [])
+        .filter((item) => item.kind === "file" && acceptedTypes.includes(item.type))
+        .map((item) => item.getAsFile())
+        .filter((file): file is File => Boolean(file))
+        .map((file) => {
+          const extension = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
+          return new File([file], `pasted-${crypto.randomUUID()}.${extension}`, {
+            type: file.type,
+            lastModified: Date.now(),
+          });
+        });
+
+      if (!pastedImages.length) return;
+      event.preventDefault();
+      accept(pastedImages);
+    };
+
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [accept, disabled]);
+
   return (
     <div className="upload-field">
       <button
@@ -58,8 +83,8 @@ export function MediaUploader({ items, onAdd, onRemove, disabled, locale }: Prop
       >
         <span className="upload-icon"><UploadCloud size={22} strokeWidth={1.7} /></span>
         <span>
-          <strong>{ko ? "사진을 드롭하거나 선택하세요" : "Drop or choose your visit photos"}</strong>
-          <small>{ko ? `JPG, PNG, WEBP · 최대 ${MAX_MEDIA_UPLOADS}장 · 자동 최적화` : `JPG, PNG, WEBP · Up to ${MAX_MEDIA_UPLOADS} · Auto-optimized`}</small>
+          <strong>{ko ? "사진을 끌어놓거나 선택하세요" : "Drag, drop, or choose your visit photos"}</strong>
+          <small>{ko ? `⌘V / Ctrl+V 붙여넣기 · JPG, PNG, WEBP · 최대 ${MAX_MEDIA_UPLOADS}장` : `Paste with ⌘V / Ctrl+V · JPG, PNG, WEBP · Up to ${MAX_MEDIA_UPLOADS}`}</small>
         </span>
       </button>
       <input
