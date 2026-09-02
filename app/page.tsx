@@ -25,7 +25,7 @@ import {
 import type { CampaignAnalysisResult, CampaignRequirements } from "@/types/campaign";
 import type { ComplianceResult } from "@/types/compliance";
 import type { GenerationResult } from "@/types/generation";
-import type { MediaAnalysisResult } from "@/types/media";
+import { MAX_MEDIA_UPLOADS, type MediaAnalysisResult } from "@/types/media";
 import type { ApplicationGenerationResult } from "@/types/application";
 import type { Locale } from "@/types/locale";
 
@@ -106,6 +106,50 @@ function emptyRequirements(sourceUrl: string): CampaignRequirements {
     deadline: null,
     otherRequirements: [],
     sourceUrl,
+  };
+}
+
+function parseRequiredTerms(raw: string) {
+  return Array.from(
+    new Set(
+      raw
+        .split(/[,\n]/)
+        .map((term) => term.trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
+function mergeReviewConstraints(
+  requirements: CampaignRequirements,
+  minimumCharactersRaw: string,
+  requiredTermsRaw: string,
+): CampaignRequirements {
+  const requestedMinimum = minimumCharactersRaw.trim() ? Number(minimumCharactersRaw) : 0;
+  const campaignMinimum = Math.max(
+    requirements.reviewRequirements.minimumCharacters ?? 0,
+    requirements.minimumCharacters ?? 0,
+  );
+  const effectiveMinimum = Math.max(campaignMinimum, requestedMinimum);
+  const terms = parseRequiredTerms(requiredTermsRaw);
+  const hashtags = terms.filter((term) => term.startsWith("#"));
+  const mentions = terms.filter((term) => !term.startsWith("#"));
+  const requiredHashtags = Array.from(new Set([
+    ...requirements.reviewRequirements.requiredHashtags,
+    ...requirements.requiredHashtags,
+    ...hashtags,
+  ]));
+
+  return {
+    ...requirements,
+    minimumCharacters: effectiveMinimum,
+    requiredMentions: Array.from(new Set([...requirements.requiredMentions, ...mentions])),
+    requiredHashtags,
+    reviewRequirements: {
+      ...requirements.reviewRequirements,
+      minimumCharacters: effectiveMinimum,
+      requiredHashtags,
+    },
   };
 }
 
@@ -247,6 +291,8 @@ export default function Home() {
   const [campaignUrl, setCampaignUrl] = useState("");
   const [applicantKeywords, setApplicantKeywords] = useState("");
   const [personalNote, setPersonalNote] = useState("");
+  const [reviewMinimumCharacters, setReviewMinimumCharacters] = useState("");
+  const [reviewRequiredTerms, setReviewRequiredTerms] = useState("");
   const [uploads, setUploads] = useState<UploadedMedia[]>([]);
   const [steps, setSteps] = useState<PipelineStepState[]>(initialSteps);
   const [errors, setErrors] = useState<PipelineError[]>([]);
@@ -290,9 +336,9 @@ export default function Home() {
 
   const addFiles = useCallback(async (files: File[]) => {
     setFormError("");
-    const remaining = Math.max(0, 12 - uploadsRef.current.length);
+    const remaining = Math.max(0, MAX_MEDIA_UPLOADS - uploadsRef.current.length);
     const allowed = files.filter((file) => file.size <= 18 * 1024 * 1024).slice(0, remaining);
-    if (allowed.length < files.length) setFormError("You can add up to 12 photos, with a maximum original size of 18 MB each.");
+    if (allowed.length < files.length) setFormError(`You can add up to ${MAX_MEDIA_UPLOADS} photos, with a maximum original size of 18 MB each.`);
     if (!allowed.length) return;
 
     setProcessingUploads(true);
@@ -328,6 +374,8 @@ export default function Home() {
         return files.map((file) => ({ id: crypto.randomUUID(), file, preview: URL.createObjectURL(file) }));
       });
       setPersonalNote(locale === "ko" ? "메인 메뉴의 담백한 맛과 바삭한 식감의 조합이 좋았어요. 매장이 차분해서 사진을 편하게 찍을 수 있었고 음식은 따뜻하게 나왔습니다." : "I liked the balance of the main dish's mild flavor and crisp texture. The space was calm enough to take photos comfortably, and the food arrived warm.");
+      setReviewMinimumCharacters("1500");
+      setReviewRequiredTerms(locale === "ko" ? "성수맛집, 데이트코스, #성수맛집" : "Seongsu restaurant, date spot, #SeongsuRestaurant");
     }
     setFormError("");
   }, [locale, workMode]);
@@ -344,6 +392,21 @@ export default function Home() {
     if (!validUrl) return setFormError("Enter a valid public campaign URL.");
     if (workMode === "review" && !uploads.length) return setFormError("Upload at least one visit photo for analysis.");
     if (workMode === "review" && !personalNote.trim()) return setFormError("Add at least one firsthand note so the draft stays grounded.");
+    if (workMode === "review" && reviewMinimumCharacters.trim()) {
+      const requestedMinimum = Number(reviewMinimumCharacters);
+      if (!Number.isInteger(requestedMinimum) || requestedMinimum < 1 || requestedMinimum > 10_000) {
+        return setFormError(locale === "ko" ? "최소 글자 수는 1~10,000 사이의 정수로 입력해 주세요." : "Enter a whole-number minimum between 1 and 10,000 characters.");
+      }
+    }
+    if (workMode === "review") {
+      const requiredTerms = parseRequiredTerms(reviewRequiredTerms);
+      if (requiredTerms.length > 30) {
+        return setFormError(locale === "ko" ? "필수 용어와 태그는 최대 30개까지 입력할 수 있습니다." : "Add up to 30 required terms and hashtags.");
+      }
+      if (requiredTerms.some((term) => term.length > 100)) {
+        return setFormError(locale === "ko" ? "필수 용어와 태그는 항목당 100자 이하로 입력해 주세요." : "Keep each required term or hashtag under 100 characters.");
+      }
+    }
 
     setRunning(true);
     setHasRun(true);
@@ -356,6 +419,7 @@ export default function Home() {
     setCompliance(null);
 
     let requirements = emptyRequirements(campaignUrl);
+    let campaignEvidence = "";
     let campaignSucceeded = false;
     let mediaItems: MediaAnalysisResult["items"] = [];
     let generated: GenerationResult | null = null;
@@ -366,13 +430,17 @@ export default function Home() {
       const result = await readResponse<CampaignAnalysisResult>(
         await fetch("/api/analyze-campaign", {
           method: "POST",
+          cache: "no-store",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ url: campaignUrl, language: locale }),
         }),
       );
-      requirements = result.requirements;
+      requirements = workMode === "review"
+        ? mergeReviewConstraints(result.requirements, reviewMinimumCharacters, reviewRequiredTerms)
+        : result.requirements;
+      campaignEvidence = result.campaignEvidence || "";
       campaignSucceeded = true;
-      setCampaign(result);
+      setCampaign({ ...result, requirements });
       updateStep("campaign", "success");
     } catch (error) {
       const failure = error as Error & { provider?: string };
@@ -393,7 +461,7 @@ export default function Home() {
             await fetch("/api/generate-application", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ requirements, applicantKeywords, language: locale }),
+              body: JSON.stringify({ requirements, campaignEvidence, applicantKeywords, language: locale }),
             }),
           );
           setApplication(result);
@@ -404,6 +472,18 @@ export default function Home() {
           updateStep("generate", "error", failure.message);
         }
       }
+      setRunning(false);
+      window.setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+      return;
+    }
+
+    if (!campaignSucceeded) {
+      const message = locale === "ko"
+        ? "공고 링크를 확인하지 못해 후기를 생성하지 않았습니다. URL과 Bright Data 연결을 확인해 주세요."
+        : "The review was not generated because the campaign URL could not be verified.";
+      updateStep("media", "error", message);
+      updateStep("generate", "error", message);
+      updateStep("compliance", "error", message);
       setRunning(false);
       window.setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
       return;
@@ -431,6 +511,7 @@ export default function Home() {
     try {
       const form = new FormData();
       form.set("requirements", JSON.stringify(requirements));
+      form.set("campaignEvidence", campaignEvidence);
       form.set("media", JSON.stringify(mediaItems));
       form.set("personalNote", personalNote);
       form.set("language", locale);
@@ -581,7 +662,7 @@ export default function Home() {
 
           {workMode === "review" && <>
           <div className="form-column form-media">
-            <label><span>02</span> {ko ? "사진 업로드" : "Media Upload"} <small>{uploads.length.toString().padStart(2, "0")} / 12</small></label>
+            <label><span>02</span> {ko ? "사진 업로드" : "Media Upload"} <small>{uploads.length.toString().padStart(2, "0")} / {MAX_MEDIA_UPLOADS}</small></label>
             <p>{ko ? "직접 방문해 촬영한 사진을 올리면 GPU가 장면과 품질을 분석합니다" : "Upload photos from your visit for GPU scene and quality analysis"}</p>
             <MediaUploader items={uploads} onAdd={addFiles} onRemove={removeFile} disabled={running || processingUploads} locale={locale} />
           </div>
@@ -600,6 +681,58 @@ export default function Home() {
               disabled={running}
             />
             <span className="char-count">{personalNote.length.toLocaleString()} / 4,000</span>
+          </div>
+
+          <div className="form-column form-review-rules">
+            <div>
+              <label><span>04</span> {ko ? "추가 작성 조건" : "Additional Requirements"} <small>{ko ? "선택" : "Optional"}</small></label>
+              <p>{ko ? "공고 조건에 원하는 글자 수와 필수 용어를 더할 수 있어요" : "Add your own length target and required terms to the campaign brief"}</p>
+            </div>
+            <div className="review-rule-fields">
+              <div className="review-rule-field">
+                <label className="review-subfield-label" htmlFor="review-minimum-characters">{ko ? "최소 글자 수" : "Minimum length"}</label>
+                <div className="review-number-wrap">
+                  <input
+                    id="review-minimum-characters"
+                    type="number"
+                    inputMode="numeric"
+                    min="1"
+                    max="10000"
+                    step="100"
+                    placeholder={ko ? "예: 1500" : "e.g. 1500"}
+                    value={reviewMinimumCharacters}
+                    onChange={(event) => setReviewMinimumCharacters(event.target.value)}
+                    disabled={running}
+                  />
+                  <span>{ko ? "자 이상" : "characters+"}</span>
+                </div>
+                <div className="review-length-presets" aria-label={ko ? "글자 수 빠른 선택" : "Quick length selection"}>
+                  {["1000", "1500", "2000"].map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={reviewMinimumCharacters === value ? "is-active" : ""}
+                      onClick={() => setReviewMinimumCharacters(value)}
+                      disabled={running}
+                    >
+                      {Number(value).toLocaleString(locale === "ko" ? "ko-KR" : "en-US")}+
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="review-rule-field">
+                <label className="review-subfield-label" htmlFor="review-required-terms">{ko ? "필수 용어 · #태그" : "Required terms · #tags"}</label>
+                <textarea
+                  id="review-required-terms"
+                  placeholder={ko ? "예: 강남맛집, 데이트코스, #강남맛집" : "e.g. Gangnam restaurant, date spot, #GangnamEats"}
+                  value={reviewRequiredTerms}
+                  maxLength={1500}
+                  onChange={(event) => setReviewRequiredTerms(event.target.value)}
+                  disabled={running}
+                />
+                <small className="review-rule-hint">{ko ? "쉼표 또는 줄바꿈으로 구분 · 태그는 # 포함" : "Separate with commas or new lines · include # for tags"}</small>
+              </div>
+            </div>
           </div>
           </>}
 

@@ -3,7 +3,7 @@ import { optionalEnv } from "@/lib/env";
 import { fetchWithTimeout, ProviderError } from "@/lib/http";
 import { providerError, providerLog } from "@/lib/logger";
 import { mediaAnalysisSchema } from "@/lib/schemas";
-import type { MediaAnalysis, MediaAnalysisResult } from "@/types/media";
+import { MAX_MEDIA_UPLOADS, type MediaAnalysis, type MediaAnalysisResult } from "@/types/media";
 
 type NosanaRuntime = {
   provider?: string;
@@ -96,7 +96,7 @@ async function analyzeOne(file: File): Promise<{ item: MediaAnalysis; runtime: N
 
 export async function analyzeMedia(files: File[]): Promise<MediaAnalysisResult> {
   if (!files.length) throw new ProviderError("Nosana", "Upload at least one photo for analysis.", 400);
-  if (files.length > 12) throw new ProviderError("Nosana", "A maximum of 12 photos can be analyzed at once.", 400);
+  if (files.length > MAX_MEDIA_UPLOADS) throw new ProviderError("Nosana", `A maximum of ${MAX_MEDIA_UPLOADS} photos can be analyzed at once.`, 400);
   providerLog("Nosana", "Running GPU inference...", { images: files.length });
 
   try {

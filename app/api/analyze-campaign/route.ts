@@ -40,6 +40,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json<CampaignAnalysisResult>({
       requirements: extracted.requirements,
+      campaignEvidence: extracted.evidence,
       source: {
         provider: "Bright Data",
         mode: "real",

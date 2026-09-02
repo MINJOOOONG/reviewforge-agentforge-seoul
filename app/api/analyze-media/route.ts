@@ -5,7 +5,7 @@ import { apiError, ProviderError } from "@/lib/http";
 import { providerLog } from "@/lib/logger";
 import { analyzeMedia } from "@/lib/nosana";
 import { assertRateLimit } from "@/lib/rate-limit";
-import type { MediaAnalysisResult } from "@/types/media";
+import { MAX_MEDIA_UPLOADS, type MediaAnalysisResult } from "@/types/media";
 
 export const runtime = "nodejs";
 export const maxDuration = 180;
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     const language = form.get("language") === "ko" ? "ko" : "en";
     const files = form.getAll("files").filter((value): value is File => value instanceof File);
     if (!files.length) throw new ProviderError("Nosana", "Upload at least one photo.", 400);
-    if (files.length > 12) throw new ProviderError("Nosana", "A maximum of 12 photos can be analyzed at once.", 400);
+    if (files.length > MAX_MEDIA_UPLOADS) throw new ProviderError("Nosana", `A maximum of ${MAX_MEDIA_UPLOADS} photos can be analyzed at once.`, 400);
 
     if (isDemoMode()) {
       providerLog("Nosana", "Demo GPU fixture loaded", { images: files.length });

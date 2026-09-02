@@ -69,6 +69,7 @@ export const campaignRequirementsSchema = z.object({
   requiredHashtags: z.array(z.string().max(100)).max(50).default([]),
   deadline: z.string().max(100).nullable().default(null),
   otherRequirements: z.array(z.string().max(500)).max(50).default([]),
+  sourceUrl: z.string().url().max(2_048).optional(),
 });
 
 export const mediaAnalysisSchema = z.object({

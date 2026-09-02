@@ -11,6 +11,8 @@ export const MEDIA_CATEGORIES = [
   "other",
 ] as const;
 
+export const MAX_MEDIA_UPLOADS = 15;
+
 export type MediaCategory = (typeof MEDIA_CATEGORIES)[number];
 
 export type MediaAnalysis = {

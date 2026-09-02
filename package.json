@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@daytona/sdk": "0.205.1",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "lucide-react": "^0.468.0",
     "next": "^16.1.6",
     "react": "^19.2.4",

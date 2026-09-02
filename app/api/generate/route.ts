@@ -8,6 +8,7 @@ import { campaignRequirementsSchema, mediaAnalysisSchema } from "@/lib/schemas";
 import { assertRateLimit } from "@/lib/rate-limit";
 import type { GenerationResult } from "@/types/generation";
 import type { Locale } from "@/types/locale";
+import { MAX_MEDIA_UPLOADS } from "@/types/media";
 
 export const runtime = "nodejs";
 export const maxDuration = 180;
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
     const form = await request.formData();
     const requirementsRaw = form.get("requirements");
     const mediaRaw = form.get("media");
+    const campaignEvidence = String(form.get("campaignEvidence") || "").trim();
     const personalNote = String(form.get("personalNote") || "").trim();
     const language: Locale = form.get("language") === "ko" ? "ko" : "en";
     const files = form.getAll("files").filter((value): value is File => value instanceof File);
@@ -26,6 +28,12 @@ export async function POST(request: Request) {
     }
     if (personalNote.length > 4_000) {
       throw new ProviderError("Qwen Cloud", "Personal Note must be 4,000 characters or fewer.", 400);
+    }
+    if (campaignEvidence.length > 32_000) {
+      throw new ProviderError("Qwen Cloud", "Campaign evidence is too large.", 400);
+    }
+    if (files.length > MAX_MEDIA_UPLOADS) {
+      throw new ProviderError("Qwen Cloud", `A maximum of ${MAX_MEDIA_UPLOADS} photos can be used at once.`, 400);
     }
 
     const requirements = campaignRequirementsSchema.parse(JSON.parse(requirementsRaw));
@@ -46,9 +54,13 @@ export async function POST(request: Request) {
       });
     }
 
+    if (!campaignEvidence) {
+      throw new ProviderError("Qwen Cloud", "Verified campaign page evidence is missing.", 400);
+    }
+
     let totalBytes = 0;
     const images = await Promise.all(
-      files.slice(0, 12).map(async (file) => {
+      files.slice(0, MAX_MEDIA_UPLOADS).map(async (file) => {
         if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
           throw new ProviderError("Qwen Cloud", `${file.name}: unsupported image format.`, 400);
         }
@@ -60,7 +72,7 @@ export async function POST(request: Request) {
         return { fileName: file.name, mimeType: file.type, dataUrl: `data:${file.type};base64,${base64}` };
       }),
     );
-    const generated = await generateReview({ requirements, media, personalNote, images, language });
+    const generated = await generateReview({ requirements, campaignEvidence, media, personalNote, images, language });
     return NextResponse.json<GenerationResult>({
       title: generated.title,
       applicationMessage: generated.applicationMessage,

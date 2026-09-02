@@ -42,13 +42,22 @@ function demoApplicationVariants(requirements: CampaignRequirements, applicantKe
 export async function POST(request: Request) {
   try {
     if (!isDemoMode()) assertRateLimit(request, "application", { limit: 5 });
-    const raw = (await request.json()) as { requirements?: unknown; applicantKeywords?: unknown; language?: unknown };
+    const raw = (await request.json()) as {
+      requirements?: unknown;
+      applicantKeywords?: unknown;
+      campaignEvidence?: unknown;
+      language?: unknown;
+    };
     if (!raw.requirements) {
       throw new ProviderError("Qwen Cloud", "Campaign requirements are missing", 400);
     }
 
     const requirements = campaignRequirementsSchema.parse(raw.requirements);
     const language: Locale = raw.language === "ko" ? "ko" : "en";
+    const campaignEvidence = typeof raw.campaignEvidence === "string" ? raw.campaignEvidence.trim() : "";
+    if (campaignEvidence.length > 32_000) {
+      throw new ProviderError("Qwen Cloud", "Campaign evidence is too large.", 400);
+    }
     const applicantKeywords = typeof raw.applicantKeywords === "string"
       ? raw.applicantKeywords
           .split(/[,\n]/)
@@ -78,6 +87,10 @@ export async function POST(request: Request) {
       });
     }
 
+    if (!campaignEvidence) {
+      throw new ProviderError("Qwen Cloud", "Verified campaign page evidence is missing.", 400);
+    }
+
     const research = await fetchNaverBusinessResearch({
       brand: requirements.brand,
       campaignName: requirements.campaignName,
@@ -89,6 +102,7 @@ export async function POST(request: Request) {
       applicantKeywords,
       language,
       research.content ? { query: research.query, content: research.content } : undefined,
+      campaignEvidence,
     );
     return NextResponse.json<ApplicationGenerationResult>({
       variants: generated.variants,

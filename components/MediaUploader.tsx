@@ -3,6 +3,7 @@
 import { ImagePlus, UploadCloud, X } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import type { Locale } from "@/types/locale";
+import { MAX_MEDIA_UPLOADS } from "@/types/media";
 
 export type UploadedMedia = {
   id: string;
@@ -58,7 +59,7 @@ export function MediaUploader({ items, onAdd, onRemove, disabled, locale }: Prop
         <span className="upload-icon"><UploadCloud size={22} strokeWidth={1.7} /></span>
         <span>
           <strong>{ko ? "사진을 드롭하거나 선택하세요" : "Drop or choose your visit photos"}</strong>
-          <small>{ko ? "JPG, PNG, WEBP · 최대 12장 · 자동 최적화" : "JPG, PNG, WEBP · Up to 12 · Auto-optimized"}</small>
+          <small>{ko ? `JPG, PNG, WEBP · 최대 ${MAX_MEDIA_UPLOADS}장 · 자동 최적화` : `JPG, PNG, WEBP · Up to ${MAX_MEDIA_UPLOADS} · Auto-optimized`}</small>
         </span>
       </button>
       <input
@@ -91,7 +92,7 @@ export function MediaUploader({ items, onAdd, onRemove, disabled, locale }: Prop
               </button>
             </div>
           ))}
-          {items.length < 12 && (
+          {items.length < MAX_MEDIA_UPLOADS && (
             <button
               type="button"
               className="upload-more"

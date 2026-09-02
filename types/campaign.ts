@@ -75,6 +75,7 @@ export type CampaignRequirements = {
 
 export type CampaignAnalysisResult = {
   requirements: CampaignRequirements;
+  campaignEvidence?: string;
   source: {
     provider: "Bright Data";
     mode: "real" | "demo";

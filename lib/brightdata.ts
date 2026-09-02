@@ -1,8 +1,11 @@
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { optionalEnv } from "@/lib/env";
 import { fetchWithTimeout, ProviderError } from "@/lib/http";
 import { providerError, providerLog } from "@/lib/logger";
 
 const ENDPOINT = "https://api.brightdata.com/request";
+const MCP_ENDPOINT = "https://mcp.brightdata.com/mcp";
 
 type BrightDataEnvelope = {
   status_code?: number;
@@ -19,7 +22,7 @@ function getZone() {
 }
 
 export function isConfigured() {
-  return Boolean(getApiKey() && getZone());
+  return Boolean(getApiKey());
 }
 
 function assertPublicHttpUrl(value: string) {
@@ -49,14 +52,90 @@ function assertPublicHttpUrl(value: string) {
   return url.toString();
 }
 
-async function requestUrl(url: string, purpose = "campaign", timeoutMs = 75_000) {
+function safeMcpErrorMessage(error: unknown, apiKey: string) {
+  const raw = error instanceof Error ? error.message : String(error);
+  return raw
+    .replaceAll(apiKey, "[redacted]")
+    .replace(/([?&]token=)[^&\s)]+/gi, "$1[redacted]")
+    .slice(0, 500);
+}
+
+async function requestViaMcp(url: string, purpose: string, timeoutMs: number) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new ProviderError("Bright Data", "The Bright Data API key is not configured.", 503);
+  }
+
+  const endpoint = new URL(MCP_ENDPOINT);
+  endpoint.searchParams.set("token", apiKey);
+  const client = new Client({ name: "reviewforge", version: "0.1.0" }, { capabilities: {} });
+  const transport = new StreamableHTTPClientTransport(endpoint);
+
+  providerLog("BrightData", "MCP START", { hostname: new URL(url).hostname, purpose });
+  try {
+    const startedAt = Date.now();
+    const connectTimeout = Math.min(timeoutMs, 15_000);
+    await client.connect(transport, { timeout: connectTimeout, maxTotalTimeout: connectTimeout });
+    const remainingTimeout = Math.max(1_000, timeoutMs - (Date.now() - startedAt));
+    const result = await client.callTool(
+      { name: "scrape_as_markdown", arguments: { url } },
+      undefined,
+      { timeout: remainingTimeout, maxTotalTimeout: remainingTimeout },
+    );
+    const rawContent = result && typeof result === "object"
+      ? (result as { content?: unknown }).content
+      : undefined;
+    if (!Array.isArray(rawContent)) {
+      throw new ProviderError("Bright Data", "Bright Data MCP returned an unsupported task response.");
+    }
+
+    const content = rawContent
+      .map((block) => {
+        if (!block || typeof block !== "object") return "";
+        const item = block as { type?: unknown; text?: unknown; resource?: unknown };
+        if (item.type === "text" && typeof item.text === "string") return item.text;
+        if (item.type === "resource" && item.resource && typeof item.resource === "object") {
+          const text = (item.resource as { text?: unknown }).text;
+          return typeof text === "string" ? text : "";
+        }
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n\n")
+      .trim();
+
+    if ((result as { isError?: unknown }).isError === true) {
+      throw new ProviderError(
+        "Bright Data",
+        content ? `Bright Data MCP rejected the request: ${content.slice(0, 300)}` : "Bright Data MCP rejected the request.",
+      );
+    }
+    if (!content) {
+      throw new ProviderError("Bright Data", "Bright Data MCP returned an empty campaign page.");
+    }
+
+    const requestId = transport.sessionId || `mcp-${Date.now()}`;
+    providerLog("BrightData", "MCP SUCCESS", { requestId, characters: content.length, purpose });
+    return { content, requestId };
+  } catch (error) {
+    const safeError = error instanceof ProviderError
+      ? error
+      : new ProviderError("Bright Data", `Bright Data MCP failed: ${safeMcpErrorMessage(error, apiKey)}`);
+    providerError("BrightData", safeError);
+    throw safeError;
+  } finally {
+    await client.close().catch(() => undefined);
+  }
+}
+
+async function requestViaWebUnlocker(url: string, purpose: string, timeoutMs: number) {
   const apiKey = getApiKey();
   const zone = getZone();
   if (!apiKey || !zone) {
     throw new ProviderError("Bright Data", "The Bright Data API key or Web Unlocker zone is not configured.", 503);
   }
 
-  providerLog("BrightData", "Fetching public page...", { hostname: new URL(url).hostname, purpose });
+  providerLog("BrightData", "Web Unlocker START", { hostname: new URL(url).hostname, purpose });
   try {
     const response = await fetchWithTimeout(
       ENDPOINT,
@@ -109,13 +188,33 @@ async function requestUrl(url: string, purpose = "campaign", timeoutMs = 75_000)
       throw new ProviderError("Bright Data", "Web Unlocker returned an empty campaign page");
     }
 
-    providerLog("BrightData", "Complete", { requestId, characters: content.length });
+    providerLog("BrightData", "Web Unlocker SUCCESS", { requestId, characters: content.length, purpose });
     return { content, requestId };
   } catch (error) {
     providerError("BrightData", error);
     if (error instanceof ProviderError) throw error;
     throw new ProviderError("Bright Data", error instanceof Error ? error.message : String(error));
   }
+}
+
+async function requestUrl(url: string, purpose = "campaign", timeoutMs = 75_000) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new ProviderError("Bright Data", "The Bright Data API key is not configured.", 503);
+  }
+
+  if (getZone()) {
+    try {
+      return await requestViaWebUnlocker(url, purpose, timeoutMs);
+    } catch (error) {
+      providerLog("BrightData", "Web Unlocker unavailable; retrying through free MCP", {
+        purpose,
+        reason: error instanceof Error ? error.message.slice(0, 240) : "Unknown Web Unlocker error",
+      });
+    }
+  }
+
+  return requestViaMcp(url, purpose, timeoutMs);
 }
 
 export async function fetchCampaign(url: string) {
@@ -199,9 +298,10 @@ export async function fetchNaverBusinessResearch(
 
 export async function healthCheck(probe = false) {
   if (!isConfigured()) {
-    return { ok: false, detail: "Bright Data key or Web Unlocker zone missing" };
+    return { ok: false, detail: "Bright Data API key missing" };
   }
-  if (!probe) return { ok: true, detail: `${getZone()} configured` };
+  const transport = getZone() ? "Web Unlocker REST with MCP fallback" : "Bright Data MCP free tier";
+  if (!probe) return { ok: true, detail: `${transport} configured` };
   const result = await requestUrl("https://geo.brdtest.com/welcome.txt", "health-check");
-  return { ok: Boolean(result.content.trim()), detail: "Web Unlocker responded" };
+  return { ok: Boolean(result.content.trim()), detail: `${transport} responded` };
 }
