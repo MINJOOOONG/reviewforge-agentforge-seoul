@@ -9,7 +9,7 @@ export type ApplicationGenerationResult = {
   researchSources: string[];
   researchQuery?: string;
   source: {
-    provider: "Local Engine";
+    provider: "Local Engine" | "Gemini";
     mode: "real" | "demo" | "local";
     model: string;
     generatedAt: string;

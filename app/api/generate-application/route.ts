@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { demoPause } from "@/lib/demo";
 import { isDemoMode } from "@/lib/env";
 import { apiError, ProviderError } from "@/lib/http";
+import { LLM_PROVIDER, llmModel, tryLlm } from "@/lib/llm";
+import { generateApplicationMessageWithLlm } from "@/lib/llm-engine";
 import { generateApplicationMessagesLocally } from "@/lib/local-engine";
 import { providerLog } from "@/lib/logger";
 import { assertRateLimit } from "@/lib/rate-limit";
@@ -86,22 +88,18 @@ export async function POST(request: Request) {
       });
     }
 
-    const localResult = () => {
-      const generated = generateApplicationMessagesLocally(requirements, applicantKeywords, language);
-      return NextResponse.json<ApplicationGenerationResult>({
-        variants: generated.variants,
-        businessHighlights: generated.businessHighlights,
-        researchSources: [],
-        source: {
-          provider: "Local Engine",
-          mode: "local",
-          model: "campaign-template-v1",
-          generatedAt: new Date().toISOString(),
-        },
-      });
-    };
+    const local = generateApplicationMessagesLocally(requirements, applicantKeywords, language);
+    const generated = await tryLlm("Application message", () =>
+      generateApplicationMessageWithLlm(requirements, applicantKeywords, language, campaignEvidence));
 
-    return localResult();
+    return NextResponse.json<ApplicationGenerationResult>({
+      variants: generated ?? local.variants,
+      businessHighlights: local.businessHighlights,
+      researchSources: [],
+      source: generated
+        ? { provider: LLM_PROVIDER, mode: "real", model: llmModel(), generatedAt: new Date().toISOString() }
+        : { provider: "Local Engine", mode: "local", model: "campaign-template-v1", generatedAt: new Date().toISOString() },
+    });
   } catch (error) {
     return apiError(error);
   }

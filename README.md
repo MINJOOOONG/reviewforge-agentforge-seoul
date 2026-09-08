@@ -52,7 +52,8 @@ Public URL + Photos + Note → Review Writer → Requirement Check
 - Next.js
 - TypeScript
 - Built-in public web reader
-- Local campaign and writing engine
+- Local campaign and writing engine (always available)
+- Optional Gemini pass for campaign extraction and the application message
 
 ## Run Locally
 
@@ -61,7 +62,19 @@ npm install
 npm run dev
 ```
 
-No API keys are required. Use `.env.example` only if you want to toggle Demo Mode.
+No API keys are required — without one, campaign extraction and the application message come
+from the built-in engine.
+
+To have a model write the application message and re-read the campaign brief, add a Gemini key
+(free tier, no card required — get one at https://aistudio.google.com/apikey):
+
+```bash
+echo "GEMINI_API_KEY=your-key" >> .env.local
+```
+
+Every LLM step falls back to the local engine when the key is missing, the quota is spent, or the
+response fails validation, so the app keeps working either way. `.env.example` also toggles Demo
+Mode.
 
 ## Demo Mode
 

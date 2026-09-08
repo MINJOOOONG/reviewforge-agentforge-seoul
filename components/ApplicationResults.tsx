@@ -58,7 +58,7 @@ export function ApplicationResults({ result, locale }: ApplicationResultsProps) 
               <div className="generated-source">
                 <Sparkles size={14} /> {result.source.mode === "local"
                   ? (locale === "ko" ? "공고 링크 + 입력한 특성 기반 · 방문 전 표현" : "Campaign link + your highlights · Pre-visit language")
-                  : (locale === "ko" ? "공고 + 공개 검색 기반 · 방문 전 표현" : "Brief + public research · Pre-visit language")}
+                  : (locale === "ko" ? "공고 링크 + 입력한 특성 기반 · 방문 전 표현" : "Campaign link + your highlights · Pre-visit language")}
               </div>
             </article>
           ))}

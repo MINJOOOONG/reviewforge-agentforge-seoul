@@ -3,6 +3,8 @@ import { readCampaignPage } from "@/lib/web-reader";
 import { DEMO_REQUIREMENTS, DEMO_REQUIREMENTS_KO, demoPause } from "@/lib/demo";
 import { isDemoMode } from "@/lib/env";
 import { apiError, ProviderError } from "@/lib/http";
+import { LLM_PROVIDER, tryLlm } from "@/lib/llm";
+import { extractCampaignRequirementsWithLlm } from "@/lib/llm-engine";
 import { extractCampaignRequirementsLocally } from "@/lib/local-engine";
 import { providerLog } from "@/lib/logger";
 import { assertRateLimit } from "@/lib/rate-limit";
@@ -37,11 +39,13 @@ export async function POST(request: Request) {
     const page = await readCampaignPage(url);
     const language = body.language === "ko" ? "ko" : "en";
     const extracted = extractCampaignRequirementsLocally(page.content, page.url, language);
+    const refined = await tryLlm("Campaign requirements", () =>
+      extractCampaignRequirementsWithLlm(page.content, extracted.requirements, page.url));
     return NextResponse.json<CampaignAnalysisResult>({
-      requirements: extracted.requirements,
+      requirements: refined ?? extracted.requirements,
       campaignEvidence: extracted.evidence,
       source: {
-        provider: page.provider,
+        provider: refined ? LLM_PROVIDER : page.provider,
         mode: "real",
         fetchedAt: new Date().toISOString(),
         pageTitle: page.pageTitle,

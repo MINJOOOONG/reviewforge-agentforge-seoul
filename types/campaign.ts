@@ -77,7 +77,7 @@ export type CampaignAnalysisResult = {
   requirements: CampaignRequirements;
   campaignEvidence?: string;
   source: {
-    provider: "Web Reader" | "Demo Fixture";
+    provider: "Web Reader" | "Demo Fixture" | "Gemini";
     mode: "real" | "demo" | "local";
     fetchedAt: string;
     pageTitle?: string;
