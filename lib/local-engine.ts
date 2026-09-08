@@ -67,14 +67,33 @@ function splitTerms(raw: string | undefined) {
     .filter((term) => term.length <= 100 && !/^(없음|해당\s*없음|-)$/.test(term));
 }
 
+const leadingNoisePatterns = [
+  /^(?:title|subject|제목|캠페인\s*명?|체험단\s*명?|공고\s*명?)\s*[:：]\s*/i,
+  /^[[(（【<][^\])）】>]{0,40}[\])）】>]\s*/,
+  /^[가-힣]{2,12}(?:맛집|카페|베이커리|미용|헤어|네일|피부|병원|숙박|여행|배달|체험단)\s*(?:체험단)?\s+(?=\S)/,
+  /^(?:모집|신청|체험|리뷰)\s*[|｜/·]\s*/,
+];
+
+function cleanIdentityText(raw: string | undefined) {
+  let value = (raw ?? "").replace(/\s+/g, " ").trim();
+  for (let pass = 0; pass < 6; pass += 1) {
+    const before = value;
+    for (const pattern of leadingNoisePatterns) value = value.replace(pattern, "").trim();
+    if (value === before) break;
+  }
+  return value.replace(/\s*[[【][^\]】]{0,40}[\]】]\s*$/, "").replace(/[\s·|｜/,.\-–—]+$/, "").trim();
+}
+
 function findCampaignIdentity(lines: string[]) {
-  const first = lines[0] || "";
-  const explicitCampaign = payloadAfterLabel(lines, /^(?:캠페인명|체험단명|공고명)\s*[:：]?/);
-  const explicitBrand = payloadAfterLabel(lines, /^(?:업체명|상호명|브랜드명?|매장명)\s*[:：]?/);
-  const socialTitle = first.match(/^(?:강남맛집(?:\s*체험단)?\s+)?(.+?)\s+-\s+(.+)$/);
+  const first = cleanIdentityText(lines[0]);
+  const explicitCampaign = cleanIdentityText(payloadAfterLabel(lines, /^(?:캠페인명|체험단명|공고명)\s*[:：]?/));
+  const explicitBrand = cleanIdentityText(payloadAfterLabel(lines, /^(?:업체명|상호명|브랜드명?|매장명)\s*[:：]?/));
+  const socialTitle = first.match(/^(.+?)\s+[-–—]\s+(.+)$/);
+  const brand = explicitBrand || cleanIdentityText(socialTitle?.[1]) || first;
+  const campaignName = explicitCampaign || cleanIdentityText(socialTitle?.[2]) || first;
   return {
-    campaignName: (explicitCampaign || socialTitle?.[2] || first || "Campaign name not identified").slice(0, 300),
-    brand: (socialTitle?.[1] || explicitBrand || "Brand not identified").slice(0, 200),
+    campaignName: (campaignName || "Campaign name not identified").slice(0, 300),
+    brand: (brand || "Brand not identified").slice(0, 200),
   };
 }
 
@@ -207,26 +226,168 @@ export function extractCampaignRequirementsLocally(
   return { requirements, evidence: selectEvidence(campaignText), language };
 }
 
+const koRoleHints = /(개발자|엔지니어|디자이너|마케터|기획자|직장인|회사원|프리랜서|사업자|대학생|학생|주부|자취생|블로거|인플루언서|사진작가|간호사|교사|승무원|커플|부부|가족|아빠|엄마|자매|남매|친구)/;
+const koDeskRoleHints = /(개발자|엔지니어|디자이너|마케터|기획자|연구원)/;
+const koInterestHints = /(좋아|즐기|사랑|관심|취미|탐방|덕후|마니아|매니아|찍|먹|다니|기록|쓰)/;
+const enRoleHints = /\b(developer|engineer|designer|marketer|planner|researcher|student|freelancer|teacher|nurse|photographer|blogger|influencer|writer|couple|family|office\s*worker)\b/i;
+const enDeskRoleHints = /\b(developer|engineer|designer|marketer|planner|researcher)\b/i;
+
+function hasFinalConsonant(word: string) {
+  const last = word.replace(/[)\]"'”’·\s]+$/u, "").slice(-1);
+  if (!last) return false;
+  const code = last.codePointAt(0) ?? 0;
+  if (code >= 0xac00 && code <= 0xd7a3) return (code - 0xac00) % 28 !== 0;
+  if (/[0-9]/.test(last)) return /[013678]/.test(last);
+  return /[lmnrLMNR]/.test(last);
+}
+
+function withParticle(word: string, afterConsonant: string, afterVowel: string) {
+  return word ? `${word}${hasFinalConsonant(word) ? afterConsonant : afterVowel}` : "";
+}
+
+function withMeansParticle(word: string) {
+  const last = word.replace(/[)\]"'”’·\s]+$/u, "").slice(-1);
+  const code = last.codePointAt(0) ?? 0;
+  const isHangul = code >= 0xac00 && code <= 0xd7a3;
+  const finalIndex = isHangul ? (code - 0xac00) % 28 : -1;
+  return `${word}${finalIndex === 0 || finalIndex === 8 || !isHangul ? "로" : "으로"}`;
+}
+
+function joinEn(items: string[]) {
+  if (items.length <= 1) return items[0] ?? "";
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+
+function joinKo(items: string[]) {
+  if (items.length <= 1) return items[0] ?? "";
+  const head = items.slice(0, -1).join(", ");
+  return `${withParticle(head, "과", "와")} ${items[items.length - 1]}`;
+}
+
+function stripInterestTail(raw: string) {
+  return raw
+    .replace(/^(?:저는|제가)\s*/, "")
+    .replace(/\s*(?:을|를|이|가)?\s*(?:정말|너무|엄청|아주|많이)?\s*(?:좋아합니다|좋아해요|좋아함|좋아해|즐깁니다|즐겨요|즐김|사랑합니다|사랑해요|관심\s*(?:많음|있음|있어요|있습니다)|관심사)\s*$/, "")
+    .trim();
+}
+
+function readApplicantProfile(keywords: string[]) {
+  let age: string | null = null;
+  let role: string | null = null;
+  const interests: string[] = [];
+  const extras: string[] = [];
+
+  for (const keyword of keywords) {
+    const ageMatch = keyword.match(/(\d{1,2})\s*(?:세|살)|\b(\d{1,2})\s*(?:years?\s*old|yo)\b/i);
+    const withoutAge = ageMatch ? keyword.replace(ageMatch[0], "").trim() : keyword;
+    if (ageMatch && !age) age = `${ageMatch[1] ?? ageMatch[2]}살`;
+    if (!withoutAge) continue;
+    if (!age && /^\d{2}$/.test(withoutAge)) {
+      age = `${withoutAge}살`;
+      continue;
+    }
+    if (!role && (koRoleHints.test(withoutAge) || enRoleHints.test(withoutAge)) && !/좋아|즐기|사랑|관심/.test(withoutAge)) {
+      role = withoutAge;
+      continue;
+    }
+    const trimmed = stripInterestTail(withoutAge);
+    if (!trimmed) continue;
+    if (koInterestHints.test(withoutAge)) interests.push(trimmed);
+    else extras.push(trimmed);
+  }
+
+  return { age, role, interests: unique(interests).slice(0, 4), extras: unique(extras).slice(0, 3) };
+}
+
+function offerFocus(offer: string | undefined, language: Locale) {
+  const text = offer ?? "";
+  const hasDessert = /디저트|케이크|빵|베이커리|쿠키|마카롱|아이스크림/.test(text);
+  const hasDrink = /음료|커피|라떼|차|주스|에이드|와인|맥주/.test(text);
+  if (language !== "ko") {
+    if (hasDessert && hasDrink) return "the desserts and drinks";
+    if (hasDessert) return "the desserts";
+    if (hasDrink) return "the drinks";
+    if (/객실|숙박|호텔|펜션|스테이/.test(text)) return "the room and facilities";
+    return "the dishes and plating";
+  }
+  if (hasDessert && hasDrink) return "디저트와 음료 사진";
+  if (hasDessert) return "디저트 사진";
+  if (hasDrink) return "음료 사진";
+  if (/객실|숙박|호텔|펜션|스테이/.test(text)) return "객실과 편의시설 사진";
+  if (/시술|케어|마사지|네일|헤어|피부/.test(text)) return "시술 과정과 결과 사진";
+  return "메뉴와 음식 사진";
+}
+
 export function generateApplicationMessagesLocally(
   requirements: CampaignRequirements,
   applicantKeywords: string[] = [],
   language: Locale = "ko",
 ): { variants: ApplicationMessageVariant[]; businessHighlights: string[] } {
-  const campaign = requirements.campaignName || (language === "ko" ? "이번 체험단" : "this campaign");
   const brand = /not identified/i.test(requirements.brand) ? "" : requirements.brand;
+  const campaign = /not identified/i.test(requirements.campaignName) ? "" : requirements.campaignName;
+  const place = brand || campaign || (language === "ko" ? "이번 체험단" : "this campaign");
   const offer = requirements.providedItems[0];
-  const profile = applicantKeywords.join(", ");
+  const profile = readApplicantProfile(applicantKeywords);
+  const focus = offerFocus(offer, language);
   const mission = [
     requirements.minimumPhotos ? (language === "ko" ? `사진 ${requirements.minimumPhotos}장` : `${requirements.minimumPhotos} photos`) : "",
     requirements.minimumCharacters ? (language === "ko" ? `본문 ${requirements.minimumCharacters.toLocaleString("ko-KR")}자` : `${requirements.minimumCharacters.toLocaleString("en-US")} characters`) : "",
-    requirements.requiredKeywords.length ? (language === "ko" ? `필수 키워드 ${requirements.requiredKeywords.join(", ")}` : `required keywords ${requirements.requiredKeywords.join(", ")}`) : "",
+    requirements.requiredKeywords.length ? (language === "ko" ? `필수 키워드 ${requirements.requiredKeywords.slice(0, 4).join(", ")}` : `the required keywords ${requirements.requiredKeywords.slice(0, 4).join(", ")}`) : "",
   ].filter(Boolean).join(", ");
 
-  const message = language === "ko"
-    ? `${campaign}에 정성껏 지원합니다. ${profile ? `저는 ${profile}이라는 특성을 살려 방문 과정과 경험을 제 관점으로 꼼꼼하게 기록할 수 있습니다. ` : ""}${offer ? `공고에서 확인한 제공 내역인 ${offer}에 관심이 생겼고, ` : ""}${brand ? `${brand}의 ` : ""}매력과 체험 과정을 독자가 이해하기 쉽게 소개하고 싶습니다. 선정된다면 방문 또는 체험 전에 공고의 일정과 주의사항을 다시 확인하고 약속된 절차를 성실하게 지키겠습니다. 현장에서는 전체 흐름과 세부 모습이 자연스럽게 이어지도록 다양한 사진을 직접 촬영하고, 제가 실제로 보고 느낀 점만 솔직하게 담겠습니다. ${mission ? `${mission} 등 공고에 적힌 작성 조건을 빠짐없이 확인해 글에 반영하겠습니다. ` : ""}과장된 표현이나 경험하지 않은 내용은 더하지 않고, 읽는 분에게 도움이 되는 구체적이고 충분한 분량의 후기를 완성하겠습니다.`
-    : `I would love to apply for ${campaign}. ${profile ? `My relevant strengths are ${profile}, and I can use them to document the experience with a clear personal point of view. ` : ""}${offer ? `The listed offer, ${offer}, caught my attention, and ` : ""}I would like to introduce ${brand || "the experience"} in a way that is useful and easy to follow. If selected, I will recheck the schedule and every instruction before attending and follow the agreed process carefully. I will take original photos that show the full journey and its important details, then write only about what I genuinely observe and experience. ${mission ? `I will also verify ${mission} before publishing. ` : ""}My final post will be specific, honest, detailed, and free of claims I cannot support.`;
+  if (language === "ko") {
+    const role = profile.role ?? "블로거";
+    const introLead = profile.interests.length
+      ? `${withParticle(joinKo(profile.interests), "을", "를")} 정말 좋아하는 `
+      : "맛있는 곳을 찾아다니고 사진으로 기록하는 걸 정말 좋아하는 ";
+    const details = ["매장 외관과 분위기", "메뉴 구성", focus, "맛과 식감", "추천 포인트"];
+    const habit = koDeskRoleHints.test(role)
+      ? `${withMeansParticle(role)} 일하다 보니 작은 부분까지 살펴보고 정리하는 습관이 있어서,`
+      : "평소 작은 부분까지 살펴보고 정리하는 걸 좋아해서,";
+
+    const opening = [
+      `${introLead}${profile.age ? `${profile.age} ` : ""}${role}입니다.`,
+      "평소에도 마음에 드는 곳을 찾아다니며 음식뿐만 아니라 매장 분위기와 메뉴까지 사진으로 꼼꼼하게 기록하는 걸 좋아해요.",
+      profile.extras.length ? `${joinKo(profile.extras)}라는 점도 이번 체험을 즐기기에 잘 맞는다고 생각합니다.` : "",
+      offer ? `공고에서 안내해주신 ${offer}${brand ? `을 보고 ${brand}의 분위기가 더 궁금해졌어요.` : "을 보고 더 방문해보고 싶어졌어요."}` : `${place}의 분위기와 메뉴가 궁금해서 이번 공고를 눈여겨보게 되었어요.`,
+      `블로그를 꾸준히 키워가고 있어서, 선정된다면 단순한 체험 후기가 아니라 ${details.join(", ")}까지 직접 느낀 내용을 자세하고 정성스럽게 담아보겠습니다.`,
+    ].filter(Boolean).join(" ");
+
+    const closing = [
+      `${habit} 리뷰도 대충 쓰기보다는 검색해서 들어온 분들이 실제 방문을 결정하는 데 도움이 될 수 있도록 사진도 다양한 구도로 많이 찍고 글도 꼼꼼하게 작성하는 편입니다.`,
+      "방문 전에는 공고의 일정과 주의사항을 다시 확인하고 약속된 절차를 성실하게 지키겠습니다.",
+      mission ? `${mission} 등 공고에 적힌 작성 조건도 빠짐없이 확인해서 반영하겠습니다.` : "",
+      "과장된 표현이나 경험하지 않은 내용은 더하지 않고, 제가 실제로 보고 느낀 점만 솔직하게 담겠습니다.",
+      `아직 성장 중인 블로그인 만큼 포스팅 하나하나에 더 애정을 쏟고 있고, 선정해주신다면 ${place}의 매력이 잘 전달될 수 있도록 정성스러운 후기 남기겠습니다.`,
+    ].filter(Boolean).join(" ");
+
+    return {
+      variants: [{ label: "맞춤 신청 문구", message: `${opening}\n\n${closing}` }],
+      businessHighlights: unique([offer, ...requirements.otherRequirements]).slice(0, 3),
+    };
+  }
+
+  const role = profile.role ?? "blogger";
+  const interests = joinEn(profile.interests) || "finding good places and photographing them";
+  const details = joinEn(["the exterior and atmosphere", "the menu line-up", focus, "the taste and texture", "who I would recommend it to"]);
+  const opening = [
+    `I am a ${profile.age ? `${profile.age.replace("살", "")}-year-old ` : ""}${role} who genuinely loves ${interests}.`,
+    "Whenever I visit somewhere I like, I photograph not only the food but also the space and the menu in detail.",
+    profile.extras.length ? `I am also ${joinEn(profile.extras)}, which I think fits this experience well.` : "",
+    offer ? `The listed offer, ${offer}, made me even more curious about ${place}.` : `I have been curious about ${place} for a while.`,
+    `I am steadily growing my blog, so if I am selected I will cover ${details} in a detailed, carefully written post rather than a throwaway review.`,
+  ].filter(Boolean).join(" ");
+
+  const closing = [
+    `${enDeskRoleHints.test(role) ? `Working as a ${role} has given me a habit of noticing and organizing small details` : "I have a habit of noticing and organizing small details"}, so I take photos from a range of angles and write thoroughly enough to help readers who arrive from search decide whether to visit.`,
+    "Before visiting I will recheck the schedule and every instruction in the brief and follow the agreed process carefully.",
+    mission ? `I will also verify ${mission} before publishing.` : "",
+    "I will not exaggerate or add anything I did not experience — only what I genuinely see and feel.",
+    `My blog is still growing, so I put real care into each post, and if selected I will write a thoughtful review that shows what makes ${place} worth visiting.`,
+  ].filter(Boolean).join(" ");
+
   return {
-    variants: [{ label: language === "ko" ? "맞춤 신청 문구" : "Recommended message", message }],
+    variants: [{ label: "Recommended message", message: `${opening}\n\n${closing}` }],
     businessHighlights: unique([offer, ...requirements.otherRequirements]).slice(0, 3),
   };
 }
