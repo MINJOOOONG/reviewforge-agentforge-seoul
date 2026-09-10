@@ -207,6 +207,10 @@ export function extractCampaignRequirementsLocally(
   return { requirements, evidence: selectEvidence(campaignText), language };
 }
 
+function pick<T>(pool: T[]): T {
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 export function generateApplicationMessagesLocally(
   requirements: CampaignRequirements,
   applicantKeywords: string[] = [],
@@ -223,12 +227,134 @@ export function generateApplicationMessagesLocally(
   ].filter(Boolean).join(", ");
 
   const message = language === "ko"
-    ? `${campaign}에 정성껏 지원합니다. ${profile ? `저는 ${profile}이라는 특성을 살려 방문 과정과 경험을 제 관점으로 꼼꼼하게 기록할 수 있습니다. ` : ""}${offer ? `공고에서 확인한 제공 내역인 ${offer}에 관심이 생겼고, ` : ""}${brand ? `${brand}의 ` : ""}매력과 체험 과정을 독자가 이해하기 쉽게 소개하고 싶습니다. 선정된다면 방문 또는 체험 전에 공고의 일정과 주의사항을 다시 확인하고 약속된 절차를 성실하게 지키겠습니다. 현장에서는 전체 흐름과 세부 모습이 자연스럽게 이어지도록 다양한 사진을 직접 촬영하고, 제가 실제로 보고 느낀 점만 솔직하게 담겠습니다. ${mission ? `${mission} 등 공고에 적힌 작성 조건을 빠짐없이 확인해 글에 반영하겠습니다. ` : ""}과장된 표현이나 경험하지 않은 내용은 더하지 않고, 읽는 분에게 도움이 되는 구체적이고 충분한 분량의 후기를 완성하겠습니다.`
-    : `I would love to apply for ${campaign}. ${profile ? `My relevant strengths are ${profile}, and I can use them to document the experience with a clear personal point of view. ` : ""}${offer ? `The listed offer, ${offer}, caught my attention, and ` : ""}I would like to introduce ${brand || "the experience"} in a way that is useful and easy to follow. If selected, I will recheck the schedule and every instruction before attending and follow the agreed process carefully. I will take original photos that show the full journey and its important details, then write only about what I genuinely observe and experience. ${mission ? `I will also verify ${mission} before publishing. ` : ""}My final post will be specific, honest, detailed, and free of claims I cannot support.`;
+    ? buildKoreanApplicationMessage({ campaign, brand, offer, profile, mission })
+    : buildEnglishApplicationMessage({ campaign, brand, offer, profile, mission });
+
   return {
     variants: [{ label: language === "ko" ? "맞춤 신청 문구" : "Recommended message", message }],
     businessHighlights: unique([offer, ...requirements.otherRequirements]).slice(0, 3),
   };
+}
+
+function buildKoreanApplicationMessage(input: { campaign: string; brand: string; offer?: string; profile: string; mission: string }) {
+  const { campaign, brand, offer, profile, mission } = input;
+
+  const opener = pick([
+    `${campaign} 공고 보자마자 바로 지원하게 됐어요.`,
+    `${brand ? `${brand} 소식` : `${campaign} 공고`} 보고 이건 꼭 신청해야겠다 싶었습니다.`,
+    `우연히 ${campaign} 보고 딱 제 취향이라 망설임 없이 지원해요.`,
+    `평소에도 관심 있게 지켜보다가 ${campaign} 기회에 지원하게 됐습니다.`,
+  ]);
+
+  const profileLine = profile
+    ? pick([
+        `저는 ${profile}인데, 그래서인지 이런 자리엔 진심으로 임하는 편이에요.`,
+        `${profile} — 이런 제 배경이 이번 체험이랑 잘 맞을 것 같습니다.`,
+        `평소 ${profile}라서 방문 과정도 제 시선으로 자세히 담을 자신이 있어요.`,
+      ])
+    : "";
+
+  const offerLine = offer
+    ? pick([
+        `특히 ${offer} 부분이 제일 궁금해서 더 끌렸어요.`,
+        `무엇보다 ${offer} 구성이 눈에 딱 들어오더라고요.`,
+        `공고에서 본 ${offer} 내용 보고 꼭 직접 경험해보고 싶어졌습니다.`,
+      ])
+    : "";
+
+  const brandLine = brand
+    ? pick([
+        `${brand}만의 매력을 저만의 시선으로 편하게 풀어서 소개하고 싶어요.`,
+        `${brand}를 처음 접하는 분들도 이해하기 쉽게 소개해드리고 싶습니다.`,
+      ])
+    : "";
+
+  const commitLine = pick([
+    `선정되면 공고에 적힌 일정이랑 주의사항 다시 한번 꼼꼼히 체크하고 그대로 지킬게요.`,
+    `방문 전에 제공 내역이랑 안내사항 다시 확인하고 약속드린 대로 진행하겠습니다.`,
+    `일정이나 조건은 미리 다시 챙겨보고 어긋나지 않게 성실히 임하겠습니다.`,
+  ]);
+
+  const photoLine = pick([
+    `현장에서는 전체 분위기부터 디테일까지 놓치지 않고 직접 찍을게요.`,
+    `사진은 공간 전체랑 메뉴 디테일까지 골고루 남겨서 보시는 분들이 흐름을 쉽게 파악할 수 있게 구성할게요.`,
+    `촬영은 처음 보는 분도 현장 분위기가 그려지도록 다양한 각도로 남길 생각이에요.`,
+  ]);
+
+  const honestyLine = pick([
+    `과장 없이 제가 직접 보고 느낀 그대로만 솔직하게 쓸게요.`,
+    `체험하지 않은 내용은 절대 넣지 않고 딱 경험한 만큼만 진솔하게 담겠습니다.`,
+    `느낀 점을 부풀리기보다 있는 그대로 편하게 읽히도록 쓰는 편이에요.`,
+  ]);
+
+  const missionLine = mission
+    ? pick([
+        `안내해주신 ${mission}도 빠짐없이 챙겨서 반영할게요.`,
+        `${mission} — 이런 조건들도 하나하나 체크하면서 작성하겠습니다.`,
+      ])
+    : "";
+
+  const closing = pick([
+    `좋은 인연으로 이어지면 정말 좋겠습니다. 감사합니다!`,
+    `기회 주시면 성실하게 잘 다녀오겠습니다. 잘 부탁드려요!`,
+    `믿고 맡겨주시면 후회 없는 후기로 보답할게요. 감사합니다.`,
+  ]);
+
+  return [opener, profileLine, offerLine, brandLine, commitLine, photoLine, honestyLine, missionLine, closing]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function buildEnglishApplicationMessage(input: { campaign: string; brand: string; offer?: string; profile: string; mission: string }) {
+  const { campaign, brand, offer, profile, mission } = input;
+
+  const opener = pick([
+    `I saw ${campaign} and knew right away I wanted to apply.`,
+    `${brand ? `I've had my eye on ${brand} for a while` : `I've been following campaigns like this`}, so I'm excited to apply for ${campaign}.`,
+    `I came across ${campaign} and it's exactly the kind of experience I love writing about.`,
+  ]);
+
+  const profileLine = profile
+    ? pick([
+        `A bit about me: ${profile} — it's the kind of background that makes me take visits like this seriously.`,
+        `I bring ${profile} to the table, which I think shows in how I document a visit.`,
+      ])
+    : "";
+
+  const offerLine = offer
+    ? pick([
+        `Honestly, ${offer} is what caught my attention first.`,
+        `The ${offer} part of the offer is what really drew me in.`,
+      ])
+    : "";
+
+  const brandLine = brand ? `I'd love to introduce ${brand} in a way that feels genuine and easy to follow.` : "";
+
+  const commitLine = pick([
+    `If selected, I'll double-check the schedule and every instruction before the visit and stick to it.`,
+    `I'll go back over the offer details and visit conditions once more before attending, and follow the agreed process.`,
+  ]);
+
+  const photoLine = pick([
+    `On site, I'll take a real mix of photos — the overall vibe and the small details too.`,
+    `I'll shoot a variety of angles so readers can follow the whole experience, not just one shot.`,
+  ]);
+
+  const honestyLine = pick([
+    `I'll write only about what I actually saw and felt, no exaggeration.`,
+    `No claims about things I didn't personally experience — just an honest account.`,
+  ]);
+
+  const missionLine = mission ? `I'll also make sure to cover ${mission} before publishing.` : "";
+
+  const closing = pick([
+    `Hope this could be the start of a good collaboration — thank you!`,
+    `Thanks for considering me, I'll make it count.`,
+  ]);
+
+  return [opener, profileLine, offerLine, brandLine, commitLine, photoLine, honestyLine, missionLine, closing]
+    .filter(Boolean)
+    .join(" ");
 }
 
 const localCategories = ["hero", "food", "menu", "interior", "exterior", "atmosphere", "other"] as const;
