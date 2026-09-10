@@ -1533,6 +1533,50 @@ footer > p { color: #71726b; font-size: 9px; letter-spacing: .06em; }
   .integration-list { display: grid; grid-template-columns: 1fr 1fr; }
 }
 
+/* Phone-sized screens (iPhone 16 is 393pt wide, Plus/Pro Max 430pt). */
+@media (max-width: 480px) {
+  /* iOS Safari zooms the page in whenever a focused field is under 16px. */
+  .url-input-wrap input,
+  .form-note textarea,
+  .form-review-rules textarea,
+  .form-review-rules input {
+    font-size: 16px;
+  }
+
+  /* Korean must wrap on word boundaries, or headings split mid-word ("캠페인에 맞/게."). */
+  h2, h3 { word-break: keep-all; }
+  .forge-header h2, .results-intro h2 { font-size: clamp(28px, 8.5vw, 34px); }
+
+  /* Touch targets: iOS HIG asks for 44pt. */
+  .language-switch button { min-height: 44px; padding: 5px 12px; }
+  .sample-button, .rerun-button { min-height: 44px; }
+  .hero-link { min-height: 44px; }
+  .review-length-presets button { min-height: 44px; padding-left: 16px; padding-right: 16px; }
+  .journey-tabs button { min-height: 64px; }
+  .generate-button { min-height: 56px; }
+
+  .hero { min-height: 380px; }
+  .hero-shell { padding: 20px 20px 40px; }
+
+  .draft-paper { font-size: 15px; padding: 26px 18px; }
+  .draft-paper, .apply-message blockquote { line-height: 1.8; }
+}
+
+/* Keep content clear of the Dynamic Island and the home indicator. */
+@supports (padding: env(safe-area-inset-left)) {
+  .site-header { padding-left: max(18px, env(safe-area-inset-left)); padding-right: max(18px, env(safe-area-inset-right)); }
+  .hero-shell,
+  .journey-shell,
+  .forge-shell,
+  .results-shell,
+  .pipeline-shell,
+  footer {
+    padding-left: max(18px, env(safe-area-inset-left));
+    padding-right: max(18px, env(safe-area-inset-right));
+  }
+  footer { padding-bottom: max(30px, env(safe-area-inset-bottom)); }
+}
+
 /* Borderless rounded visual skin */
 .journey-tabs { gap: 12px; }
 .journey-tabs button,
