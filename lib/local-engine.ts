@@ -236,29 +236,47 @@ export function generateApplicationMessagesLocally(
   };
 }
 
+function sentenceEnd(playfulChance = 0.35, pool: string[] = [" :)", " ♡", "!"]) {
+  return Math.random() < playfulChance ? pick(pool) : ".";
+}
+
 function buildKoreanApplicationMessage(input: { campaign: string; brand: string; offer?: string; profile: string; mission: string }) {
   const { campaign, brand, offer, profile, mission } = input;
 
   const opener = pick([
-    `${campaign} 공고 보자마자 바로 지원하게 됐어요.`,
+    `${campaign} 공고 보자마자 바로 지원하게 됐어요${sentenceEnd()}`,
     `${brand ? `${brand} 소식` : `${campaign} 공고`} 보고 이건 꼭 신청해야겠다 싶었습니다.`,
-    `우연히 ${campaign} 보고 딱 제 취향이라 망설임 없이 지원해요.`,
+    `우연히 ${campaign} 보고 딱 제 취향이라 망설임 없이 지원해요${sentenceEnd()}`,
     `평소에도 관심 있게 지켜보다가 ${campaign} 기회에 지원하게 됐습니다.`,
   ]);
 
   const profileLine = profile
     ? pick([
-        `저는 ${profile}인데, 그래서인지 이런 자리엔 진심으로 임하는 편이에요.`,
+        `저는 ${profile}인데, 그래서인지 이런 자리엔 진심으로 임하는 편이에요${sentenceEnd(0.3, [" :)"])}`,
         `${profile} — 이런 제 배경이 이번 체험이랑 잘 맞을 것 같습니다.`,
-        `평소 ${profile}라서 방문 과정도 제 시선으로 자세히 담을 자신이 있어요.`,
+        `평소 ${profile}이라서 방문 과정도 제 시선으로 자세히 담을 자신이 있어요.`,
+        `${profile}이다 보니 매장 분위기부터 메뉴 하나하나까지 꼼꼼히 기록하는 게 제 스타일이에요.`,
       ])
     : "";
+
+  const blogLine = pick([
+    `현재 블로그도 꾸준히 키우고 있어서 사진은 다양한 구도로 정성스럽게 담고, 후기도 성의 있게 써드릴 자신 있어요.`,
+    `블로그를 꾸준히 운영 중이라 사진 구도나 후기 구성은 익숙하게 신경 써서 준비할 수 있습니다.`,
+    "",
+    "",
+  ]);
+
+  const goalLine = pick([
+    `단순히 다녀왔다는 후기가 아니라, 매장 분위기부터 플레이팅, 메뉴별 특징과 맛까지 꼼꼼히 담아서 보는 분들이 "여기 한번 가보고 싶다" 싶은 후기를 남기고 싶어요.`,
+    `방문하고 끝나는 게 아니라 공간 분위기, 플레이팅, 메뉴 하나하나의 특징까지 자세히 기록해서 읽는 분들이 궁금해질 만한 후기로 만들고 싶습니다.`,
+  ]);
 
   const offerLine = offer
     ? pick([
         `특히 ${offer} 부분이 제일 궁금해서 더 끌렸어요.`,
         `무엇보다 ${offer} 구성이 눈에 딱 들어오더라고요.`,
         `공고에서 본 ${offer} 내용 보고 꼭 직접 경험해보고 싶어졌습니다.`,
+        `체험 구성이 무려 ${offer}이던데, 이 정도면 코스 흐름이랑 디시 하나하나의 특징까지 하나씩 정성껏 담아볼게요!`,
       ])
     : "";
 
@@ -266,6 +284,7 @@ function buildKoreanApplicationMessage(input: { campaign: string; brand: string;
     ? pick([
         `${brand}만의 매력을 저만의 시선으로 편하게 풀어서 소개하고 싶어요.`,
         `${brand}를 처음 접하는 분들도 이해하기 쉽게 소개해드리고 싶습니다.`,
+        `특히 ${brand}처럼 플레이팅이랑 공간 분위기가 예쁜 곳은 사진 찍는 재미까지 있어서 더 기대돼요.`,
       ])
     : "";
 
@@ -298,9 +317,10 @@ function buildKoreanApplicationMessage(input: { campaign: string; brand: string;
     `좋은 인연으로 이어지면 정말 좋겠습니다. 감사합니다!`,
     `기회 주시면 성실하게 잘 다녀오겠습니다. 잘 부탁드려요!`,
     `믿고 맡겨주시면 후회 없는 후기로 보답할게요. 감사합니다.`,
+    `소중한 기회 주시면 정말 예쁘고 꼼꼼한 후기로 보답할게요! 꼭 방문해보고 싶습니다${sentenceEnd(0.6, [" ♡", "!"])}`,
   ]);
 
-  return [opener, profileLine, offerLine, brandLine, commitLine, photoLine, honestyLine, missionLine, closing]
+  return [opener, profileLine, blogLine, goalLine, offerLine, brandLine, commitLine, photoLine, honestyLine, missionLine, closing]
     .filter(Boolean)
     .join(" ");
 }
