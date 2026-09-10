@@ -227,7 +227,7 @@ export function generateApplicationMessagesLocally(
   ].filter(Boolean).join(", ");
 
   const message = language === "ko"
-    ? buildKoreanApplicationMessage({ campaign, brand, offer, profile, mission })
+    ? buildKoreanApplicationMessage({ campaign, brand, offer, profile, photos: requirements.minimumPhotos })
     : buildEnglishApplicationMessage({ campaign, brand, offer, profile, mission });
 
   return {
@@ -240,87 +240,74 @@ function sentenceEnd(playfulChance = 0.35, pool: string[] = [" :)", " ♡", "!"]
   return Math.random() < playfulChance ? pick(pool) : ".";
 }
 
-function buildKoreanApplicationMessage(input: { campaign: string; brand: string; offer?: string; profile: string; mission: string }) {
-  const { campaign, brand, offer, profile, mission } = input;
+/** Pulls a short, quotable bit out of a long offer line so the message can react to it
+ *  the way a person would ("무려 8코스") instead of pasting the whole notice text.
+ *  `impressive` gates the "무려" phrasing, which reads sarcastic on small offers like "2잔". */
+function offerHighlight(offer?: string) {
+  if (!offer) return { text: "", impressive: false };
+  const countable = offer.match(/(\d+)\s*(코스|종|가지|인분|잔|병|매|회)/);
+  if (countable) {
+    return {
+      text: `${countable[1]}${countable[2]}`,
+      impressive: countable[2] === "코스" || Number(countable[1]) >= 5,
+    };
+  }
+  return { text: offer.length <= 20 ? offer : "", impressive: false };
+}
 
-  const opener = pick([
-    `${campaign} 공고 보자마자 바로 지원하게 됐어요${sentenceEnd()}`,
-    `${brand ? `${brand} 소식` : `${campaign} 공고`} 보고 이건 꼭 신청해야겠다 싶었습니다.`,
-    `우연히 ${campaign} 보고 딱 제 취향이라 망설임 없이 지원해요${sentenceEnd()}`,
-    `평소에도 관심 있게 지켜보다가 ${campaign} 기회에 지원하게 됐습니다.`,
-  ]);
+function buildKoreanApplicationMessage(input: { campaign: string; brand: string; offer?: string; profile: string; photos: number }) {
+  const { campaign, brand, offer, profile, photos } = input;
+  const place = brand || campaign;
 
   const profileLine = profile
     ? pick([
-        `저는 ${profile}인데, 그래서인지 이런 자리엔 진심으로 임하는 편이에요${sentenceEnd(0.3, [" :)"])}`,
-        `${profile} — 이런 제 배경이 이번 체험이랑 잘 맞을 것 같습니다.`,
-        `평소 ${profile}이라서 방문 과정도 제 시선으로 자세히 담을 자신이 있어요.`,
-        `${profile}이다 보니 매장 분위기부터 메뉴 하나하나까지 꼼꼼히 기록하는 게 제 스타일이에요.`,
+        `${profile} — 이런 제 취향이랑 이번 체험단이 정말 잘 맞을 것 같아 지원해요${sentenceEnd(0.5, [" :)"])}`,
+        `${profile}. 그래서 이런 자리는 늘 진심으로 준비하는 편이에요${sentenceEnd(0.5, [" :)"])}`,
+        `간단히 소개드리면 ${profile} — 공고 보자마자 이건 꼭 신청해야겠다 싶었어요${sentenceEnd(0.5, ["!"])}`,
+      ])
+    : `${campaign} 공고 보자마자 이건 꼭 신청해야겠다 싶었어요${sentenceEnd(0.5, ["!"])}`;
+
+  const goalLine = pick([
+    `단순히 먹고 끝나는 체험이 아니라, 매장 분위기부터 플레이팅, 메뉴별 특징과 맛까지 꼼꼼하게 기록해서 보는 분들이 "여기는 한번 가보고 싶다!"는 생각이 들 수 있는 리뷰를 남기겠습니다!`,
+    `방문하고 끝이 아니라 공간 분위기, 플레이팅, 메뉴 하나하나의 특징까지 자세히 담아서 읽는 분들이 "여기 꼭 가봐야겠다" 싶어지는 후기로 만들고 싶어요!`,
+  ]);
+
+  const brandLine = brand
+    ? pick([
+        `특히 ${brand}처럼 플레이팅과 공간 분위기가 예쁜 곳은 사진 찍는 재미까지 있을 것 같아 꼭 경험해보고 싶어요.`,
+        `${brand} 사진만 봐도 분위기가 정말 좋아 보여서 직접 담아보고 싶은 마음이 컸어요.`,
       ])
     : "";
 
   const blogLine = pick([
-    `현재 블로그도 꾸준히 키우고 있어서 사진은 다양한 구도로 정성스럽게 담고, 후기도 성의 있게 써드릴 자신 있어요.`,
-    `블로그를 꾸준히 운영 중이라 사진 구도나 후기 구성은 익숙하게 신경 써서 준비할 수 있습니다.`,
-    "",
-    "",
+    `현재 블로그도 꾸준히 키우고 있어서 사진은 다양한 구도로 정성스럽게 촬영하고, 매력이 잘 전달되도록 후기 역시 성의 있게 작성할 자신 있습니다${sentenceEnd(0.5, [" :)"])}`,
+    `블로그를 꾸준히 운영하고 있어서 사진 구도나 글 구성은 늘 신경 써서 준비하는 편이에요${sentenceEnd(0.5, [" :)"])}`,
+    `${photos ? `사진도 ${photos}장 이상 다양한 구도로 정성껏 담아서, 메뉴와 공간의 매력이 잘 전달되도록 준비하겠습니다.` : `사진은 다양한 구도로 정성껏 담아서 메뉴와 공간의 매력이 잘 전달되도록 준비하겠습니다.`}`,
   ]);
 
-  const goalLine = pick([
-    `단순히 다녀왔다는 후기가 아니라, 매장 분위기부터 플레이팅, 메뉴별 특징과 맛까지 꼼꼼히 담아서 보는 분들이 "여기 한번 가보고 싶다" 싶은 후기를 남기고 싶어요.`,
-    `방문하고 끝나는 게 아니라 공간 분위기, 플레이팅, 메뉴 하나하나의 특징까지 자세히 기록해서 읽는 분들이 궁금해질 만한 후기로 만들고 싶습니다.`,
-  ]);
-
-  const offerLine = offer
+  const highlight = offerHighlight(offer);
+  const offerLine = highlight.impressive
     ? pick([
-        `특히 ${offer} 부분이 제일 궁금해서 더 끌렸어요.`,
-        `무엇보다 ${offer} 구성이 눈에 딱 들어오더라고요.`,
-        `공고에서 본 ${offer} 내용 보고 꼭 직접 경험해보고 싶어졌습니다.`,
-        `체험 구성이 무려 ${offer}이던데, 이 정도면 코스 흐름이랑 디시 하나하나의 특징까지 하나씩 정성껏 담아볼게요!`,
+        `체험권이 무려 ${highlight.text} 구성인 만큼 흐름과 각 메뉴의 특징까지 하나하나 담아서 정성껏 소개하겠습니다.`,
+        `${highlight.text} 구성이라니 더 기대돼요! 하나하나 놓치지 않고 꼼꼼히 기록해볼게요.`,
       ])
-    : "";
-
-  const brandLine = brand
-    ? pick([
-        `${brand}만의 매력을 저만의 시선으로 편하게 풀어서 소개하고 싶어요.`,
-        `${brand}를 처음 접하는 분들도 이해하기 쉽게 소개해드리고 싶습니다.`,
-        `특히 ${brand}처럼 플레이팅이랑 공간 분위기가 예쁜 곳은 사진 찍는 재미까지 있어서 더 기대돼요.`,
-      ])
-    : "";
-
-  const commitLine = pick([
-    `선정되면 공고에 적힌 일정이랑 주의사항 다시 한번 꼼꼼히 체크하고 그대로 지킬게요.`,
-    `방문 전에 제공 내역이랑 안내사항 다시 확인하고 약속드린 대로 진행하겠습니다.`,
-    `일정이나 조건은 미리 다시 챙겨보고 어긋나지 않게 성실히 임하겠습니다.`,
-  ]);
-
-  const photoLine = pick([
-    `현장에서는 전체 분위기부터 디테일까지 놓치지 않고 직접 찍을게요.`,
-    `사진은 공간 전체랑 메뉴 디테일까지 골고루 남겨서 보시는 분들이 흐름을 쉽게 파악할 수 있게 구성할게요.`,
-    `촬영은 처음 보는 분도 현장 분위기가 그려지도록 다양한 각도로 남길 생각이에요.`,
-  ]);
-
-  const honestyLine = pick([
-    `과장 없이 제가 직접 보고 느낀 그대로만 솔직하게 쓸게요.`,
-    `체험하지 않은 내용은 절대 넣지 않고 딱 경험한 만큼만 진솔하게 담겠습니다.`,
-    `느낀 점을 부풀리기보다 있는 그대로 편하게 읽히도록 쓰는 편이에요.`,
-  ]);
-
-  const missionLine = mission
-    ? pick([
-        `안내해주신 ${mission}도 빠짐없이 챙겨서 반영할게요.`,
-        `${mission} — 이런 조건들도 하나하나 체크하면서 작성하겠습니다.`,
-      ])
-    : "";
+    : highlight.text
+      ? pick([
+          `제공해주시는 ${highlight.text} 구성, 하나하나 놓치지 않고 꼼꼼히 담아볼게요!`,
+          `${highlight.text} 구성이 어떤 매력일지 궁금해서 더 기대돼요.`,
+        ])
+      : pick([
+          `제공해주시는 구성이 정말 알차 보여서 하나하나 놓치지 않고 담아보고 싶어요.`,
+          "",
+        ]);
 
   const closing = pick([
-    `좋은 인연으로 이어지면 정말 좋겠습니다. 감사합니다!`,
-    `기회 주시면 성실하게 잘 다녀오겠습니다. 잘 부탁드려요!`,
-    `믿고 맡겨주시면 후회 없는 후기로 보답할게요. 감사합니다.`,
-    `소중한 기회 주시면 정말 예쁘고 꼼꼼한 후기로 보답할게요! 꼭 방문해보고 싶습니다${sentenceEnd(0.6, [" ♡", "!"])}`,
+    `소중한 기회 주시면 정말 예쁘고 꼼꼼한 리뷰로 보답할게요! 꼭 방문해보고 싶습니다${sentenceEnd(0.7, [" ♡", "!"])}`,
+    `기회 주시면 성심껏 다녀와서 정성스러운 후기로 보답하겠습니다! 잘 부탁드려요${sentenceEnd(0.7, [" ♡", "!"])}`,
+    `${place} 꼭 한번 방문해보고 싶어요! 좋은 기회 주시면 정말 감사하겠습니다${sentenceEnd(0.7, [" ♡", "!"])}`,
   ]);
 
-  return [opener, profileLine, blogLine, goalLine, offerLine, brandLine, commitLine, photoLine, honestyLine, missionLine, closing]
+  return [profileLine, goalLine, brandLine, blogLine, offerLine, closing]
     .filter(Boolean)
     .join(" ");
 }
