@@ -391,35 +391,41 @@ function pickUnused(pool: string[], used: Set<string>) {
 
 const koPhotoFrames: Record<string, string[]> = {
   exterior: [
-    "간판이 크지 않아서 처음 가시는 분은 이 사진 참고하시면 찾기 편하실 거예요.",
-    "입구 쪽은 이런 느낌이라 지나치지 않고 바로 알아볼 수 있었어요.",
+    "입구는 이렇게 생겼어요! 간판이 크지 않아서 처음 가시는 분들은 이 사진 참고하시면 좋을 것 같아요~",
+    "요기가 입구예요! 골목이라 헤맬까 걱정했는데 딱 보이더라고요 ㅎㅎ",
   ],
   interior: [
-    "자리에 앉자마자 분위기가 편안해서 사진도 부담 없이 찍을 수 있었어요.",
-    "테이블 간격이 여유로운 편이라 옆자리 신경 쓰지 않고 있을 수 있었어요.",
+    "안에 들어가니까 분위기가 진짜 좋더라고요! 자리에 앉자마자 사진부터 찍었어요 ㅋㅋ",
+    "내부는 이런 느낌이에요~ 테이블 간격이 넉넉해서 편하게 있다 왔습니다!",
   ],
   atmosphere: [
-    "이 각도에서 보면 공간 분위기가 한눈에 들어와요.",
-    "조명이 어떤 느낌인지 궁금하실 것 같아 이 컷도 같이 담았어요.",
+    "이 각도에서 보면 분위기가 한눈에 들어와요!",
+    "조명이 어떤지 궁금하실까봐 이 컷도 찍어봤어요 :)",
   ],
   food: [
-    "나온 순서대로 담아봤는데 플레이팅이 정갈해서 그냥 지나칠 수가 없더라고요.",
-    "접시가 나오자마자 찍은 컷이에요. 색감이 예뻐서 보정 없이 그대로 올립니다.",
-    "가까이에서 한 장 더 찍었어요. 구성이 어떻게 되어 있는지 보시기 편할 거예요.",
+    "나오자마자 바로 한 컷!! 플레이팅이 너무 예뻐서 그냥 못 지나가겠더라고요~",
+    "이건 진짜 사진으로 담아야 한다 싶었어요! 색감 보이시나요..??",
+    "가까이서도 한 장 찍어봤어요! 구성이 어떤지 잘 보이시죵?",
   ],
   menu: [
-    "메뉴 구성이 궁금하실 것 같아 메뉴판도 찍어뒀어요.",
-    "주문할 때 참고하시라고 메뉴판 사진도 함께 올려둡니다.",
+    "메뉴 궁금하실 것 같아서 메뉴판도 찍어왔습니당!",
+    "주문하실 때 참고하시라고 메뉴판도 올려둘게요~",
   ],
   hero: [
-    "이번 방문에서 가장 기억에 남은 장면이라 대표 사진으로 골랐어요.",
-    "한 장만 고르라면 이 사진일 것 같아 앞쪽에 배치했어요.",
+    "이번 방문에서 제일 기억에 남는 장면이에요! 대표 사진으로 골랐습니다 (*´∀｀*)",
+    "한 장만 고르라고 하면 무조건 이 사진이에요!!",
   ],
   other: [
-    "흐름상 이 장면도 같이 보시면 이해가 쉬울 것 같아 넣었어요.",
-    "따로 설명이 필요할까 싶었지만 분위기가 잘 담겨서 함께 올려요.",
+    "이 장면도 같이 보시면 좋을 것 같아서 넣어봤어요~",
+    "설명이 필요할까 싶었는데 분위기가 잘 담겨서 같이 올립니당!",
   ],
 };
+
+const koReaderQuestions = [
+  "여러분은 이런 곳 가면 사진부터 찍는 편이신가요..?? 저는 무조건 찍고 시작해요 ㅋㅋ",
+  "여러분만의 맛집 판별 기준 같은 거 있으신가요..??",
+  "이런 분위기 좋아하시는 분들 계실 것 같은데 어떠신가요~?",
+];
 
 /** Splits the visitor's own note into reusable sentence fragments so the draft can
  *  weave them through the photos instead of quoting the whole note once. */
@@ -463,12 +469,19 @@ export function generateReviewLocally(
   const offer = requirements.providedItems[0];
   const fragments = language === "ko" ? noteFragments(note) : [];
   const paragraphs = language === "ko" ? [
-    `${brand || campaign} 다녀왔어요. 직접 찍은 사진이랑 그날 남겨둔 메모를 순서대로 정리해봤습니다.`,
+    pick([
+      `안녕하세요~ 오늘은 ${brand || campaign} 다녀온 후기 들고 왔어요 :)`,
+      `안녕하세요! ${brand || campaign} 다녀왔습니당 (*´∀｀*)`,
+      `안녕하세요~ 얼마 전에 다녀온 ${brand || campaign} 후기 남겨볼게요!`,
+    ]),
     fragments[0]
-      ? `${fragments[0]} 이 기억이 가장 먼저 떠올라서 여기서부터 풀어볼게요.`
-      : "사진으로 확인할 수 있는 부분만 담았고, 확실하지 않은 정보는 굳이 적지 않았어요.",
-    offer ? `제공받은 건 ${offer}이었어요.` : "",
-    "사진은 방문한 순서에 가깝게 올려둘게요. 처음 가시는 분도 흐름을 따라오기 편하실 거예요.",
+      ? `${fragments[0]} 이 기억이 제일 먼저 떠오르더라고요 ㅎㅎ`
+      : "사진 많이 찍어왔으니까 천천히 보여드릴게요~",
+    offer ? `제공받은 건 ${offer}이었어요!` : "",
+    pick([
+      "사진은 방문한 순서대로 올려둘게요! 처음 가시는 분들도 따라오기 편하실 거예요~",
+      "그럼 바로 사진부터 보여드릴게요! 순서대로 올려둘게요 :)",
+    ]),
   ].filter(Boolean) : [
     `After completing ${campaign}, I organized my original photos and firsthand notes in a clear sequence. I have included only what I actually experienced and have not filled any gaps with guesses.`,
     `${note ? `My note immediately after the visit was: “${note}”` : "No separate visit note was provided, so this draft follows only the uploaded photo sequence."} I kept that evidence at the center of the story instead of exaggerating the experience.`,
@@ -497,20 +510,26 @@ export function generateReviewLocally(
   // The visitor's remaining notes go in one block after the photos — pinning them to
   // individual photos misattributes them (a course-pacing note under an exterior shot).
   if (language === "ko" && fragments.length > 1) {
-    paragraphs.push(`그 외에 기억에 남는 건 이런 것들이에요. ${fragments.slice(1).join(" ")}`);
+    paragraphs.push(`그리고 기억에 남는 건 이런 것들이었어요! ${fragments.slice(1).join(" ")}`);
   }
+  if (language === "ko") paragraphs.push(pick(koReaderQuestions));
 
   const closingPool = language === "ko" ? [
-    `사진으로 다 전해지지 않는 부분도 있어서, 궁금한 점 있으시면 댓글로 편하게 물어봐 주세요.`,
-    `방문 계획 있으시면 예약이랑 운영 시간은 미리 한 번 확인해보시는 걸 추천드려요.`,
-    `같은 곳을 가도 느낌은 사람마다 다를 수 있으니 사진 위주로 참고해주시면 좋겠어요.`,
-    `사진은 전부 직접 찍은 거라 보정 없이 그대로 올렸어요. 실제 색감이랑 큰 차이는 없을 거예요.`,
-    `${brand ? `${brand} ` : ""}방문 생각 중이신 분들께 도움이 됐으면 하는 마음으로 정리해봤습니다.`,
-    `여기까지 읽어주셔서 감사해요. 다음에 또 좋은 곳 다녀오면 정리해서 올릴게요!`,
-    `사진 순서는 실제로 다녀온 흐름 그대로라 따라 보시면 동선이 대충 그려지실 거예요.`,
-    `괜찮게 보셨다면 저장해두셨다가 방문하실 때 참고하셔도 좋을 것 같아요.`,
-    `기록해두지 않으면 금방 잊어버려서 그날 느낌이 남아있을 때 정리해뒀습니다.`,
-    `자세한 메뉴 구성이나 가격은 바뀔 수 있으니 방문 전에 한 번 더 확인해보세요.`,
+    `사진으로 다 전해지지 않는 부분도 있어서, 궁금한 거 있으시면 댓글로 편하게 물어봐 주세요~`,
+    `방문 계획 있으시면 예약이랑 영업시간은 미리 한 번 확인해보시는 걸 추천드려요!`,
+    `같은 곳을 가도 느낌은 다를 수 있으니 사진 위주로 참고해주시면 좋을 것 같아요 :)`,
+    `사진은 전부 직접 찍은 거예요! 보정 없이 그대로 올렸습니당`,
+    `${brand ? `${brand} ` : ""}가보실까 고민 중이신 분들께 도움이 됐으면 좋겠어요!`,
+    `사진 순서는 실제로 다녀온 순서 그대로라 따라 보시면 동선이 그려지실 거예요~`,
+    `괜찮게 보셨다면 저장해두셨다가 방문하실 때 꺼내보셔도 좋을 것 같아요 ㅎㅎ`,
+    `기록 안 해두면 금방 까먹어서 기억 남아있을 때 바로 정리했어요!`,
+    `메뉴 구성이나 가격은 바뀔 수 있으니 방문 전에 한 번 더 확인해보세요!`,
+    `사진이 많아서 스크롤 길어졌는데 끝까지 봐주셔서 감사해요 ㅎㅎ`,
+    `저는 이런 곳 다녀오면 사진 정리하는 게 은근 재밌더라고요~`,
+    `혹시 다녀오시게 되면 어떠셨는지 댓글로 알려주셔도 좋을 것 같아요!`,
+    `주차나 웨이팅 관련해서는 미리 찾아보고 가시는 걸 추천드릴게요~`,
+    `사진으로 보시는 것보다 실제로 가보시면 또 다른 느낌일 거예요 :)`,
+    `비슷한 곳 후기도 종종 올리고 있으니 관심 있으시면 구경 오세요~`,
   ] : [
     `My priority was to preserve a genuine visitor's point of view. I focused on what happened in sequence and what I recorded, rather than filling the post with promotional claims.`,
     `Each photo contributes a different moment to the story. Keeping the paragraphs short makes the sequence easier to follow on both desktop and mobile.`,
@@ -520,10 +539,10 @@ export function generateReviewLocally(
   ];
 
   const keywordPhrases = language === "ko" ? [
-    (term: string) => `${term} 찾아보시는 분들께 조금이나마 도움이 되면 좋겠어요.`,
-    (term: string) => `${term} 다녀온 기록이라 사진도 방문 순서 그대로 올려뒀습니다.`,
-    (term: string) => `이번에 ${term} 후기를 남기면서 사진을 시간 순으로 정리해봤어요.`,
-    (term: string) => `${term} 관련해서 궁금하셨던 분들은 사진 같이 보시면 감이 오실 거예요.`,
+    (term: string) => `${term} 찾고 계셨다면 여기 참고하시면 좋을 것 같아요!`,
+    (term: string) => `${term} 다녀온 후기라 사진도 순서대로 올려둘게요~`,
+    (term: string) => `이번에 ${term} 후기 쓰면서 사진 진짜 많이 찍었어요 ㅎㅎ`,
+    (term: string) => `${term} 궁금하셨던 분들은 사진 같이 보시면 감 오실 거예요!`,
   ] : [
     (term: string) => `I organized these firsthand notes and photos for readers researching ${term}.`,
     (term: string) => `This ${term} record follows the actual experience and uploaded photo order.`,
@@ -565,9 +584,29 @@ export function generateReviewLocally(
     }
   }
   const targetLength = Math.max(minimumCharacters, 700);
-  const usedClosing = new Set<string>();
-  while (characterCount(draft) < targetLength) {
-    draft += `\n\n${pickUnused(closingPool, usedClosing)}`;
+  // Long campaigns (1,500자+) drain the closing pool and start repeating it, so the
+  // uploaded captions become extra padding material that still refers to real photos.
+  const recallPool = language === "ko"
+    ? media
+        .map((item) => item.caption?.trim())
+        .filter((caption): caption is string => Boolean(caption) && !/^직접 업로드한/.test(caption!))
+        .map((caption) => `다시 봐도 ${caption} 사진이 마음에 들어요! 이 장면은 꼭 담고 싶었거든요~`)
+    : [];
+  const fillerPool = [...closingPool, ...recallPool];
+  const usedFiller = new Set<string>();
+  // Stop once every filler line is spent rather than cycling the pool again. A draft
+  // that repeats the same paragraph four times reads as spam; falling short instead
+  // lets the rule checker flag the gap so the writer adds their own experience.
+  while (characterCount(draft) < targetLength && usedFiller.size < fillerPool.length) {
+    draft += `\n\n${pickUnused(fillerPool, usedFiller)}`;
+  }
+  // The sign-off is appended after the padding loop so it always lands last.
+  if (language === "ko") {
+    draft += `\n\n${pick([
+      "그럼 다음에 또 좋은 곳 다녀와서 후기로 돌아올게요! 안녕~~",
+      "그럼 다음에 또 맛있는 곳으로 돌아올게요! 안녕히 계세요~",
+      "오늘 후기는 여기까지예요! 읽어주셔서 감사합니당 :)",
+    ])}`;
   }
   if (requiredLinks.length) draft += `\n\n${requiredLinks.join("\n")}`;
   if (requiredHashtags.length) draft += `\n\n${requiredHashtags.join(" ")}`;
