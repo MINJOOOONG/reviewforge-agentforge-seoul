@@ -380,6 +380,56 @@ function characterCount(value: string) {
   return Array.from(value.replace(/^\s*\[PHOTO:.*\]\s*$/gm, "").replace(/\s/g, "")).length;
 }
 
+/** Picks from `pool` without repeating anything already in `used`, so photo captions
+ *  don't all collapse onto the same sentence. Falls back to the pool once exhausted. */
+function pickUnused(pool: string[], used: Set<string>) {
+  const fresh = pool.filter((line) => !used.has(line));
+  const chosen = pick(fresh.length ? fresh : pool);
+  used.add(chosen);
+  return chosen;
+}
+
+const koPhotoFrames: Record<string, string[]> = {
+  exterior: [
+    "간판이 크지 않아서 처음 가시는 분은 이 사진 참고하시면 찾기 편하실 거예요.",
+    "입구 쪽은 이런 느낌이라 지나치지 않고 바로 알아볼 수 있었어요.",
+  ],
+  interior: [
+    "자리에 앉자마자 분위기가 편안해서 사진도 부담 없이 찍을 수 있었어요.",
+    "테이블 간격이 여유로운 편이라 옆자리 신경 쓰지 않고 있을 수 있었어요.",
+  ],
+  atmosphere: [
+    "이 각도에서 보면 공간 분위기가 한눈에 들어와요.",
+    "조명이 어떤 느낌인지 궁금하실 것 같아 이 컷도 같이 담았어요.",
+  ],
+  food: [
+    "나온 순서대로 담아봤는데 플레이팅이 정갈해서 그냥 지나칠 수가 없더라고요.",
+    "접시가 나오자마자 찍은 컷이에요. 색감이 예뻐서 보정 없이 그대로 올립니다.",
+    "가까이에서 한 장 더 찍었어요. 구성이 어떻게 되어 있는지 보시기 편할 거예요.",
+  ],
+  menu: [
+    "메뉴 구성이 궁금하실 것 같아 메뉴판도 찍어뒀어요.",
+    "주문할 때 참고하시라고 메뉴판 사진도 함께 올려둡니다.",
+  ],
+  hero: [
+    "이번 방문에서 가장 기억에 남은 장면이라 대표 사진으로 골랐어요.",
+    "한 장만 고르라면 이 사진일 것 같아 앞쪽에 배치했어요.",
+  ],
+  other: [
+    "흐름상 이 장면도 같이 보시면 이해가 쉬울 것 같아 넣었어요.",
+    "따로 설명이 필요할까 싶었지만 분위기가 잘 담겨서 함께 올려요.",
+  ],
+};
+
+/** Splits the visitor's own note into reusable sentence fragments so the draft can
+ *  weave them through the photos instead of quoting the whole note once. */
+function noteFragments(note: string) {
+  return note
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((line) => line.trim())
+    .filter((line) => line.length >= 6);
+}
+
 function occurrences(value: string, term: string) {
   return term ? value.split(term).length - 1 : 0;
 }
@@ -411,32 +461,56 @@ export function generateReviewLocally(
   const title = unique([...titleKeywords, brand || campaign]).join(" · ");
   const note = personalNote.trim();
   const offer = requirements.providedItems[0];
+  const fragments = language === "ko" ? noteFragments(note) : [];
   const paragraphs = language === "ko" ? [
-    `${campaign} 체험을 마친 뒤, 직접 촬영한 사진과 그때 남긴 메모를 순서대로 정리해 보았어요. 확인하지 못한 정보는 임의로 덧붙이지 않고 제가 실제로 경험한 내용만 담았습니다.`,
-    `${note ? `제가 체험 직후 남긴 솔직한 메모는 “${note}”였어요.` : "별도의 체험 메모가 없어 사진으로 확인할 수 있는 흐름만 정리했어요."} 기억에 의존해 내용을 과장하기보다 이 기록을 중심으로 후기를 구성했습니다.`,
-    `${offer ? `공고에 안내된 제공 내역은 ${offer}이었고, 실제 후기도 이 체험의 흐름이 잘 드러나도록 정리했어요.` : "공고에 적힌 체험 내용과 제가 남긴 기록이 어긋나지 않도록 하나씩 확인하며 글을 작성했어요."}`,
-    `처음 보는 분도 체험 과정을 쉽게 따라올 수 있도록 사진을 시간 순서에 가깝게 배치했어요. 각 장면 사이에는 제가 직접 확인한 내용만 연결해 불필요한 추측을 줄였습니다.`,
-  ] : [
+    `${brand || campaign} 다녀왔어요. 직접 찍은 사진이랑 그날 남겨둔 메모를 순서대로 정리해봤습니다.`,
+    fragments[0]
+      ? `${fragments[0]} 이 기억이 가장 먼저 떠올라서 여기서부터 풀어볼게요.`
+      : "사진으로 확인할 수 있는 부분만 담았고, 확실하지 않은 정보는 굳이 적지 않았어요.",
+    offer ? `제공받은 건 ${offer}이었어요.` : "",
+    "사진은 방문한 순서에 가깝게 올려둘게요. 처음 가시는 분도 흐름을 따라오기 편하실 거예요.",
+  ].filter(Boolean) : [
     `After completing ${campaign}, I organized my original photos and firsthand notes in a clear sequence. I have included only what I actually experienced and have not filled any gaps with guesses.`,
     `${note ? `My note immediately after the visit was: “${note}”` : "No separate visit note was provided, so this draft follows only the uploaded photo sequence."} I kept that evidence at the center of the story instead of exaggerating the experience.`,
     `${offer ? `The campaign listed ${offer}, and I organized the post around that experience.` : "I cross-checked the campaign brief while organizing this review."} The aim is to make the visit easy for a reader to follow.`,
     `I placed the photos in a simple narrative order and connected them only with observations supported by my note. This keeps the review useful without adding unverified details.`,
   ];
 
+  const usedFrames = new Set<string>();
+  const usedLeads = new Set<string>();
   media.forEach((item, index) => {
     paragraphs.push(`[PHOTO: ${item.fileName} — ${item.caption ?? item.category}]`);
-    paragraphs.push(language === "ko"
-      ? `직접 업로드한 ${index + 1}번째 사진입니다. 이 장면은 체험 기록의 흐름을 보여주기 위해 배치했으며, 사진과 메모로 확인할 수 없는 정보는 따로 단정하지 않았어요.`
-      : `This is uploaded photo ${index + 1}. I placed it here to continue the visit story and avoided claims about taste or service that the image and note cannot support.`);
+    if (language !== "ko") {
+      paragraphs.push(`This is uploaded photo ${index + 1}. I placed it here to continue the visit story and avoided claims about taste or service that the image and note cannot support.`);
+      return;
+    }
+    const caption = item.caption?.trim();
+    // Frames never take a particle after the caption, which would break on names
+    // whose final sound the engine cannot infer.
+    const lead = caption && !/^직접 업로드한/.test(caption)
+      ? pickUnused([`${caption} 사진이에요. `, `${caption} 모습이에요. `, `${caption}부터 볼게요. `, `${caption}, 이렇게 담겼어요. `], usedLeads)
+      : "";
+    const frame = pickUnused(koPhotoFrames[item.category] ?? koPhotoFrames.other, usedFrames);
+    paragraphs.push(`${lead}${frame}`);
   });
 
+  // The visitor's remaining notes go in one block after the photos — pinning them to
+  // individual photos misattributes them (a course-pacing note under an exterior shot).
+  if (language === "ko" && fragments.length > 1) {
+    paragraphs.push(`그 외에 기억에 남는 건 이런 것들이에요. ${fragments.slice(1).join(" ")}`);
+  }
+
   const closingPool = language === "ko" ? [
-    `글을 정리하면서 가장 중요하게 생각한 점은 실제 방문자의 시선이 자연스럽게 전달되는 것이었어요. 광고 문구처럼 과장하기보다 어떤 순서로 체험했고 무엇을 기억했는지 편안하게 읽히도록 구성했습니다.`,
-    `사진마다 같은 설명을 반복하지 않고 전체 모습과 세부 장면이 서로 이어지도록 배치했어요. 덕분에 한 장만 볼 때보다 현장의 흐름을 조금 더 구체적으로 살펴볼 수 있습니다.`,
-    `체험을 고민하는 분에게 필요한 것은 화려한 표현보다 확인 가능한 기록이라고 생각해요. 그래서 공고 내용, 직접 촬영한 사진, 개인 메모의 범위를 벗어나는 정보는 넣지 않았습니다.`,
-    `${brand ? `${brand}에 대한 ` : "이번 "}후기는 제 실제 경험을 바탕으로 작성했어요. 같은 장소나 서비스를 경험하더라도 느낌은 다를 수 있으니 사진과 메모를 함께 참고해 주세요.`,
-    `마지막으로 게시하기 전에는 공고에 적힌 키워드와 분량, 사진 수, 링크와 태그를 다시 확인했어요. 형식만 맞추는 데 그치지 않고 읽는 흐름도 자연스럽게 유지하려고 했습니다.`,
-    `모바일에서도 부담 없이 읽을 수 있도록 문단을 짧게 나누고 사진 사이에 필요한 설명을 배치했어요. 실제 체험의 순서와 감상이 끊기지 않도록 차분하게 마무리했습니다.`,
+    `사진으로 다 전해지지 않는 부분도 있어서, 궁금한 점 있으시면 댓글로 편하게 물어봐 주세요.`,
+    `방문 계획 있으시면 예약이랑 운영 시간은 미리 한 번 확인해보시는 걸 추천드려요.`,
+    `같은 곳을 가도 느낌은 사람마다 다를 수 있으니 사진 위주로 참고해주시면 좋겠어요.`,
+    `사진은 전부 직접 찍은 거라 보정 없이 그대로 올렸어요. 실제 색감이랑 큰 차이는 없을 거예요.`,
+    `${brand ? `${brand} ` : ""}방문 생각 중이신 분들께 도움이 됐으면 하는 마음으로 정리해봤습니다.`,
+    `여기까지 읽어주셔서 감사해요. 다음에 또 좋은 곳 다녀오면 정리해서 올릴게요!`,
+    `사진 순서는 실제로 다녀온 흐름 그대로라 따라 보시면 동선이 대충 그려지실 거예요.`,
+    `괜찮게 보셨다면 저장해두셨다가 방문하실 때 참고하셔도 좋을 것 같아요.`,
+    `기록해두지 않으면 금방 잊어버려서 그날 느낌이 남아있을 때 정리해뒀습니다.`,
+    `자세한 메뉴 구성이나 가격은 바뀔 수 있으니 방문 전에 한 번 더 확인해보세요.`,
   ] : [
     `My priority was to preserve a genuine visitor's point of view. I focused on what happened in sequence and what I recorded, rather than filling the post with promotional claims.`,
     `Each photo contributes a different moment to the story. Keeping the paragraphs short makes the sequence easier to follow on both desktop and mobile.`,
@@ -445,34 +519,55 @@ export function generateReviewLocally(
     `Before publishing, I checked the requested length, terms, media count, links, and tags once more while keeping the writing readable.`,
   ];
 
-  let draft = paragraphs.join("\n\n");
   const keywordPhrases = language === "ko" ? [
-    (term: string) => `필수 키워드 “${term}”를 찾는 분들이 체험 흐름을 이해할 수 있도록 사진과 메모를 중심으로 정리했어요.`,
-    (term: string) => `${term} 관련 정보를 살펴보는 분에게 도움이 되도록 직접 확인한 내용과 사진의 순서를 맞췄습니다.`,
-    (term: string) => `이번 ${term} 기록은 과장된 설명보다 실제 체험에서 남은 인상과 촬영한 장면을 차분하게 전하는 데 집중했어요.`,
+    (term: string) => `${term} 찾아보시는 분들께 조금이나마 도움이 되면 좋겠어요.`,
+    (term: string) => `${term} 다녀온 기록이라 사진도 방문 순서 그대로 올려뒀습니다.`,
+    (term: string) => `이번에 ${term} 후기를 남기면서 사진을 시간 순으로 정리해봤어요.`,
+    (term: string) => `${term} 관련해서 궁금하셨던 분들은 사진 같이 보시면 감이 오실 거예요.`,
   ] : [
     (term: string) => `I organized these firsthand notes and photos for readers researching ${term}.`,
     (term: string) => `This ${term} record follows the actual experience and uploaded photo order.`,
     (term: string) => `Readers comparing ${term} information can use the confirmed details and original images together.`,
   ];
+  const keywordSentences: string[] = [];
   for (const term of bodyKeywords) {
     const expected = minimumCounts[term] ?? requirements.keywordRules.minimumOccurrences ?? 1;
     let phraseIndex = 0;
-    while (occurrences(draft, term) < expected) {
-      draft += `\n\n${keywordPhrases[phraseIndex % keywordPhrases.length](term)}`;
+    while (occurrences([...paragraphs, ...keywordSentences].join("\n\n"), term) < expected) {
+      keywordSentences.push(keywordPhrases[phraseIndex % keywordPhrases.length](term));
       phraseIndex += 1;
     }
   }
+
+  // Slot the keyword sentences between photo blocks. Stacking them all at the end is
+  // what makes a draft read as machine-padded. Each photo occupies two entries
+  // (marker + text), so insert only on pair boundaries to keep markers with their text.
+  const photoStart = paragraphs.findIndex((line) => line.startsWith("[PHOTO:"));
+  if (photoStart !== -1) {
+    let inserted = 0;
+    for (const [index, sentence] of keywordSentences.entries()) {
+      const boundary = photoStart + (index + 1) * 2 + inserted;
+      if (index + 1 >= media.length) {
+        paragraphs.push(sentence);
+        continue;
+      }
+      paragraphs.splice(boundary, 0, sentence);
+      inserted += 1;
+    }
+  } else {
+    paragraphs.push(...keywordSentences);
+  }
+
+  let draft = paragraphs.join("\n\n");
   for (const mention of requiredMentions) {
     if (!draft.includes(mention)) {
       draft += language === "ko" ? `\n\n공고에서 요청한 ${mention} 내용도 빠뜨리지 않고 함께 기록합니다.` : `\n\nThis record also includes the required mention: ${mention}.`;
     }
   }
   const targetLength = Math.max(minimumCharacters, 700);
-  let fillerIndex = 0;
+  const usedClosing = new Set<string>();
   while (characterCount(draft) < targetLength) {
-    draft += `\n\n${closingPool[fillerIndex % closingPool.length]}`;
-    fillerIndex += 1;
+    draft += `\n\n${pickUnused(closingPool, usedClosing)}`;
   }
   if (requiredLinks.length) draft += `\n\n${requiredLinks.join("\n")}`;
   if (requiredHashtags.length) draft += `\n\n${requiredHashtags.join(" ")}`;
